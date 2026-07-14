@@ -91,11 +91,11 @@ export function SiteHeader() {
 
             {/* Phone number, as on harperinsure.com */}
             <a
-              href="tel:+14708394314"
+              href="tel:+14157046424"
               className="flex items-center gap-2 text-sm font-medium text-ember-creme/70 hover:text-white transition-colors"
             >
               <span className="material-symbols-outlined text-lg">call</span>
-              (470) 839-4314
+              (415) 704-6424
             </a>
 
             {cta}
@@ -166,11 +166,11 @@ export function SiteHeader() {
 
           <div className="p-6 border-t border-white/10 space-y-4">
             <a
-              href="tel:+14708394314"
+              href="tel:+14157046424"
               className="flex items-center justify-center gap-2 text-ember-creme text-lg font-medium hover:text-white transition-colors no-underline"
             >
               <span className="material-symbols-outlined text-xl">call</span>
-              (470) 839-4314
+              (415) 704-6424
             </a>
             <Link
               href="#become-a-partner"

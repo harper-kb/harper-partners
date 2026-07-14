@@ -16,13 +16,15 @@ type FieldKey = "name" | "agency" | "email" | "state" | "lines" | "licensed";
 type Errors = Partial<Record<FieldKey, string>>;
 
 /**
- * Partner sign-up form — static marketing UI. No backend: on a valid submit it
- * flips to a client-side thank-you state. Validates required fields, a proper
- * email address, and a licensed-agent confirmation before accepting.
+ * Partner sign-up form. Validates required fields, a proper email address, and
+ * a licensed-agent confirmation, then POSTs to /api/partner to persist the
+ * signup before flipping to the thank-you state.
  */
 export function PartnerForm() {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (submitted) {
     return (
@@ -39,7 +41,7 @@ export function PartnerForm() {
     );
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const name = ((data.get("name") as string) ?? "").trim();
@@ -59,7 +61,25 @@ export function PartnerForm() {
     if (!licensed) next.licensed = "You must be a licensed agent to join.";
 
     setErrors(next);
-    if (Object.keys(next).length === 0) setSubmitted(true);
+    if (Object.keys(next).length > 0) return;
+
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/partner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, agency, email, state, lines, licensed }),
+      });
+      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      setSubmitted(true);
+    } catch {
+      setSubmitError(
+        "Something went wrong — please try again, or email us at partners@harperinsure.com."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -137,13 +157,19 @@ export function PartnerForm() {
 
       <button
         type="submit"
-        className="cta-button-primary w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember-salmon focus-visible:ring-offset-2"
+        disabled={submitting}
+        className="cta-button-primary w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ember-salmon focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        Become a partner
+        {submitting ? "Submitting…" : "Become a partner"}
         <span className="btn-arrow-chip">
           <span className="material-symbols-outlined text-sm">arrow_outward</span>
         </span>
       </button>
+      {submitError && (
+        <p className="text-center text-[0.8125rem] text-ember-salmon-800" role="alert">
+          {submitError}
+        </p>
+      )}
       <p className="text-center text-[11px] leading-relaxed text-ember-muted">
         Licensed agents only. No fee to join — you earn a share of commission on
         business Harper binds. Referred accounts are owned and serviced by Harper.

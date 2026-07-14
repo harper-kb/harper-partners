@@ -59,8 +59,8 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: "What does it cost to join?",
     a: (
       <>
-        Nothing. There&apos;s no fee to join and nothing out of pocket — you earn
-        only when Harper binds business from a client you forwarded.
+        Nothing. There&apos;s no fee to join — you don&apos;t pay us anything. You
+        earn only when Harper binds business from a client you forwarded.
       </>
     ),
   },
@@ -71,7 +71,7 @@ export default function LandingPage() {
     <div>
       {/* Hero — Deep Blue editorial hero (hero-prestige, as on harperinsure.com) */}
       <section className="hero-prestige w-full">
-        <div className="relative z-10 w-full max-w-container mx-auto px-4 sm:px-8 lg:px-16 pt-16 pb-12 lg:pt-24 lg:pb-14">
+        <div className="relative z-10 w-full max-w-container mx-auto px-4 sm:px-8 lg:px-16 pt-12 pb-10 lg:pt-16 lg:pb-12">
           <div className="max-w-[880px]">
             <span className="eyebrow eyebrow-light">Harper Partners</span>
             <h1 className="display-serif text-white text-[2.375rem] lg:text-[3.5rem] font-normal leading-[1.05] m-0 mb-6 max-w-[18ch]">
@@ -105,7 +105,7 @@ export default function LandingPage() {
           </div>
 
           {/* Promise row — hairline-divided value props */}
-          <div className="mt-14 lg:mt-16 pt-10 border-t border-ember-creme/15 grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-0">
+          <div className="mt-8 lg:mt-10 pt-8 border-t border-ember-creme/15 grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-0">
             <div className="sm:pr-10">
               <div className="display-serif text-ember-creme text-[1.375rem] font-medium leading-snug">
                 You send the <em className="accent-serif">commercial you can&apos;t write.</em>
@@ -211,8 +211,9 @@ export default function LandingPage() {
               <ul className="mt-7 space-y-3 text-sm text-ember-creme/80 list-none m-0 p-0">
                 <li className="cov-item">Keep 50% of the commission on business we bind</li>
                 <li className="cov-item">Every commercial line, not just hard-to-place risks</li>
+                <li className="cov-item">A proper handoff — we introduce ourselves to your client and keep you in the loop</li>
                 <li className="cov-item">You never service the account — Harper handles it end to end</li>
-                <li className="cov-item">Paid 60 days after the account settles — never out of pocket</li>
+                <li className="cov-item">Paid 60 days after the account settles</li>
               </ul>
               <div className="mt-9">
                 <Link
@@ -232,7 +233,7 @@ export default function LandingPage() {
               <span className="eyebrow eyebrow-light">Illustrative Example</span>
               <div className="card-base p-5 text-ember-blue">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold m-0">Example commercial referral</p>
+                  <p className="font-semibold m-0">Bond Insurance Group</p>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-ember-blue-01 px-2.5 py-1 text-xs font-semibold text-ember-blue-08 ring-1 ring-ember-rule">
                     Sample
                   </span>
@@ -331,11 +332,6 @@ export default function LandingPage() {
                 Commission is earned only while a policy stays in force. If an
                 account cancels or goes unpaid, the corresponding commission is
                 reconciled and charged back.
-              </li>
-              <li className="cov-item">
-                <b className="text-ember-blue font-semibold">No guarantees.</b>{" "}
-                This is a commission-share partnership, not employment. Nothing
-                here promises a specific volume of business or income.
               </li>
             </ul>
           </div>
