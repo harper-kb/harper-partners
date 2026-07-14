@@ -75,7 +75,7 @@ export function PartnerForm() {
       setSubmitted(true);
     } catch {
       setSubmitError(
-        "Something went wrong — please try again, or email us at partners@harperinsure.com."
+        "Something went wrong — please try again, or email us at partnerships@harperinsure.com."
       );
     } finally {
       setSubmitting(false);
