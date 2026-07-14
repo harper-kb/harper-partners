@@ -271,7 +271,7 @@ export default function LandingPage() {
             <div className="text-center mb-10 md:mb-12">
               <span className="eyebrow text-center">Common Questions</span>
               <h2 className="display-serif text-ember-blue text-[1.75rem] lg:text-[1.875rem] font-medium leading-[1.15] m-0">
-                The Honest <em className="accent-serif">Answers.</em>
+                FAQs
               </h2>
             </div>
             <dl className="m-0">
