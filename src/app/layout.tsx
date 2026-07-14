@@ -30,14 +30,14 @@ export const metadata: Metadata = {
     template: "%s | Harper Partners",
   },
   description:
-    "Send us the commercial business you can't write and keep 50% of the commission — and when personal & auto business comes our way, we'll send it to you. A partnership for personal & auto brokerages.",
+    "Send us the commercial business you can't write and keep 50% of the commission on everything we bind. A commission-share partnership for licensed personal & auto agents. Referred accounts are owned and serviced by Harper.",
   icons: { icon: "/favicon.svg" },
   openGraph: {
     siteName: "Harper Partners",
     type: "website",
     title: "Harper Partners",
     description:
-      "Turn the commercial clients you can't write into income. Keep 50% of the commission, and when personal & auto business comes our way, we'll send it to you — backed by Harper.",
+      "Turn the commercial clients you can't write into income. Keep 50% of the commission on business Harper binds — a commission-share partnership for licensed agents.",
   },
   twitter: { card: "summary_large_image" },
 };
