@@ -1,4 +1,5 @@
 import { getSql } from "@/lib/db";
+import { isEmailConfigured, sendPartnerConfirmation } from "@/lib/email";
 
 const LINES_OPTIONS = [
   "Personal & auto only",
@@ -57,6 +58,24 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "Something went wrong saving your details." },
       { status: 500 }
+    );
+  }
+
+  // Best-effort confirmation email. The lead is already safely saved above, so
+  // any failure here (missing API key, unverified domain, Resend outage) must
+  // NOT change the response — we log it server-side and still return success.
+  if (isEmailConfigured()) {
+    try {
+      const result = await sendPartnerConfirmation({ toEmail: email, name });
+      if (!result.ok) {
+        console.error("partner confirmation email failed:", result.error);
+      }
+    } catch (err) {
+      console.error("partner confirmation email threw:", err);
+    }
+  } else {
+    console.warn(
+      "RESEND_API_KEY not set — partner lead saved, confirmation email skipped."
     );
   }
 
