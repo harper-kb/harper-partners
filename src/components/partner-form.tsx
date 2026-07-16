@@ -35,7 +35,7 @@ export function PartnerForm() {
         <p className="mt-2 text-sm text-ember-muted max-w-[46ch] mx-auto">
           Thanks for your interest in Harper Partners. Our partnerships team will
           reach out to confirm your license and walk you through the 50/50 split.
-          Georgia brokerages are onboarding first.
+          We&apos;re onboarding new partner agencies now.
         </p>
       </div>
     );
@@ -121,7 +121,7 @@ export function PartnerForm() {
             name="state"
             maxLength={40}
             className="form-input-light text-sm"
-            placeholder="Georgia"
+            placeholder="Your state"
           />
         </Field>
         <Field label="Lines you write" error={errors.lines}>

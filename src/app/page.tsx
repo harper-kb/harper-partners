@@ -354,9 +354,9 @@ export default function LandingPage() {
                 minutes to start.
               </p>
               <p className="text-ember-creme/55 text-[0.8125rem] leading-relaxed mt-5 m-0 max-w-[52ch]">
-                Georgia brokerages are onboarding first. Open to licensed agents
-                only — you must be licensed in the state where the business is
-                written. Referred accounts are owned and serviced by Harper.
+                We&apos;re onboarding new partner agencies now. Open to licensed
+                agents only — you must be licensed in the state where the business
+                is written. Referred accounts are owned and serviced by Harper.
               </p>
             </div>
 
