@@ -1,28 +1,34 @@
-// Transactional email for harper-partners, sent via Resend's HTTP API — the
-// same lightweight pattern Harper's other Next.js/self-serve apps use
-// (intake-university, harper-university, garage/daycare self-serve). No SDK
-// dependency: a single fetch to https://api.resend.com/emails.
+// Transactional email for harper-partners, sent through the Gmail API as
+// partnerships@harperinsure.com. Authorization is a Google OAuth2 refresh token
+// (see scripts/get-gmail-token.mjs for the one-time login that mints it).
 //
 // Everything here is best-effort. Sending a confirmation must NEVER block or
 // fail partner lead capture — callers should treat a failed send as a no-op and
 // still report success for the saved lead.
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+import { google } from "googleapis";
 
-// Who the confirmation appears to come from. Defaults to the partnerships
-// mailbox, but this only actually delivers once harperinsure.com is a verified
-// sending domain in Resend. Before verification, set PARTNER_CONFIRMATION_FROM
-// to "Harper Partners <onboarding@resend.dev>" to test end to end.
-const FROM =
-  process.env.PARTNER_CONFIRMATION_FROM ||
-  "Harper Partners <partnerships@harperinsure.com>";
+const GOOGLE_OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || "";
+const GOOGLE_OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || "";
+const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN || "";
+
+// The Gmail mailbox we authenticate as and send from.
+const USER_GOOGLE_EMAIL =
+  process.env.USER_GOOGLE_EMAIL || "partnerships@harperinsure.com";
+
+// The visible From header. Uses the authenticated mailbox with a friendly name.
+const FROM = `Harper Partners <${USER_GOOGLE_EMAIL}>`;
 
 // Replies always route to the real partnerships inbox.
 const REPLY_TO =
   process.env.PARTNER_CONFIRMATION_REPLY_TO || "partnerships@harperinsure.com";
 
 export function isEmailConfigured(): boolean {
-  return Boolean(RESEND_API_KEY);
+  return Boolean(
+    GOOGLE_OAUTH_CLIENT_ID &&
+      GOOGLE_OAUTH_CLIENT_SECRET &&
+      GOOGLE_REFRESH_TOKEN
+  );
 }
 
 function escapeHtml(value: string): string {
@@ -148,42 +154,143 @@ export function buildPartnerConfirmationEmail(name: string): {
   return { subject, text, html };
 }
 
+/** RFC 2047 "encoded-word" for header values that may contain non-ASCII. */
+function encodeHeader(value: string): string {
+  // Fast path: plain ASCII headers can be sent as-is.
+  if (/^[\x20-\x7E]*$/.test(value)) return value;
+  return `=?UTF-8?B?${Buffer.from(value, "utf-8").toString("base64")}?=`;
+}
+
+/** Wrap base64 content to 76-char lines (RFC 2045 line-length limit). */
+function wrapBase64(input: string): string {
+  return (input.match(/.{1,76}/g) ?? [input]).join("\r\n");
+}
+
+/** Base64url without padding, as required by the Gmail API `raw` field. */
+function toBase64Url(input: string): string {
+  return Buffer.from(input, "utf-8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
 /**
- * Send the partner confirmation email. Best-effort: returns a result object and
- * never throws. If RESEND_API_KEY is not set, this is a no-op and the caller
- * should simply skip sending (the lead is already saved).
+ * Assemble an RFC 822 multipart/alternative message (plain text + HTML) that
+ * renders in every mail client. Bodies are base64-encoded with a UTF-8 charset
+ * so accented names and special characters survive intact.
+ */
+function buildMimeMessage(params: {
+  from: string;
+  to: string;
+  replyTo: string;
+  subject: string;
+  text: string;
+  html: string;
+}): string {
+  const boundary = `harper_${Date.now().toString(36)}_${Math.random()
+    .toString(36)
+    .slice(2)}`;
+
+  const encodedText = wrapBase64(
+    Buffer.from(params.text, "utf-8").toString("base64")
+  );
+  const encodedHtml = wrapBase64(
+    Buffer.from(params.html, "utf-8").toString("base64")
+  );
+
+  return [
+    `From: ${params.from}`,
+    `To: ${params.to}`,
+    `Reply-To: ${params.replyTo}`,
+    `Subject: ${encodeHeader(params.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    encodedText,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    encodedHtml,
+    "",
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+}
+
+/**
+ * Build an authenticated Gmail client from the OAuth2 credentials. Throws a
+ * clear error if any required environment variable is missing so failures are
+ * easy to diagnose in server logs.
+ */
+function getGmailClient() {
+  const missing: string[] = [];
+  if (!GOOGLE_OAUTH_CLIENT_ID) missing.push("GOOGLE_OAUTH_CLIENT_ID");
+  if (!GOOGLE_OAUTH_CLIENT_SECRET) missing.push("GOOGLE_OAUTH_CLIENT_SECRET");
+  if (!GOOGLE_REFRESH_TOKEN) missing.push("GOOGLE_REFRESH_TOKEN");
+  if (missing.length > 0) {
+    throw new Error(
+      `Gmail sending is not configured — missing env var(s): ${missing.join(
+        ", "
+      )}. Run scripts/get-gmail-token.mjs to obtain a refresh token.`
+    );
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    GOOGLE_OAUTH_CLIENT_ID,
+    GOOGLE_OAUTH_CLIENT_SECRET
+  );
+  oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+
+  return google.gmail({ version: "v1", auth: oauth2Client });
+}
+
+/**
+ * Send the partner confirmation email via the Gmail API. Best-effort: returns a
+ * result object and never throws. If the Gmail credentials are not configured,
+ * this is a no-op and the caller should simply skip sending (the lead is already
+ * saved).
  */
 export async function sendPartnerConfirmation(params: {
   toEmail: string;
   name: string;
-}): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
-  if (!RESEND_API_KEY) {
-    return { ok: false, skipped: true, error: "RESEND_API_KEY is not set" };
+}): Promise<{ ok: boolean; skipped?: boolean; error?: string; id?: string }> {
+  if (!isEmailConfigured()) {
+    return {
+      ok: false,
+      skipped: true,
+      error: "Gmail credentials are not set",
+    };
   }
 
   const { subject, text, html } = buildPartnerConfirmationEmail(params.name);
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const gmail = getGmailClient();
+
+    const raw = toBase64Url(
+      buildMimeMessage({
         from: FROM,
-        to: [params.toEmail],
-        reply_to: REPLY_TO,
+        to: params.toEmail,
+        replyTo: REPLY_TO,
         subject,
-        html,
         text,
-      }),
+        html,
+      })
+    );
+
+    const res = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw },
     });
 
-    if (res.ok) return { ok: true };
-
-    const detail = await res.text().catch(() => "");
-    return { ok: false, error: `Resend HTTP ${res.status}: ${detail}` };
+    return { ok: true, id: res.data.id ?? undefined };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
   }

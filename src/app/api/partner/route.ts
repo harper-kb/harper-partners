@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   }
 
   // Best-effort confirmation email. The lead is already safely saved above, so
-  // any failure here (missing API key, unverified domain, Resend outage) must
+  // any failure here (missing credentials, revoked token, Gmail API outage) must
   // NOT change the response — we log it server-side and still return success.
   if (isEmailConfigured()) {
     try {
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
   } else {
     console.warn(
-      "RESEND_API_KEY not set — partner lead saved, confirmation email skipped."
+      "Gmail credentials not set — partner lead saved, confirmation email skipped."
     );
   }
 
