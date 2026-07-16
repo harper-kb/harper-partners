@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
-import { AnnouncementBanner } from "@/components/announcement-banner";
 import "./globals.css";
 
 // Font roles mirror harperinsuredotcom: Plus Jakarta Sans (primary) +
@@ -57,7 +56,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-white">
-        <AnnouncementBanner />
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <SiteFooter />
