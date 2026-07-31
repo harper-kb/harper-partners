@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { name: "How It Works", href: "#how-it-works" },
   { name: "The 50/50", href: "#the-split" },
   { name: "FAQ", href: "#faq" },
+  { name: "Track", href: "/track" },
   { name: "harperinsure.com", href: "https://harperinsure.com", external: true },
 ];
 

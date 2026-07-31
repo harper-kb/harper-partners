@@ -30,7 +30,7 @@ database, or network access.
 
 ## Pages & sections
 
-Single landing page (`src/app/page.tsx`):
+Marketing landing (`src/app/(marketing)/page.tsx`):
 
 1. **Hero** — deep-blue `hero-prestige` with the two-way pitch + promise row
 2. **Proof band** — hardcoded stats (70/30, $1–2K/mo, 558 brokerages)
@@ -38,6 +38,12 @@ Single landing page (`src/app/page.tsx`):
 4. **Two-way band** — deep-blue band with a partner-payout preview card + benefits list
 5. **FAQ** — editorial hairline-ruled Q&A (licensing, no-poach, lines, payout, cost)
 6. **Final CTA** — deep-blue band with a static "Become a partner" form
+
+Partner Track portal (`/track`):
+
+- Email-gated agency dashboard (intake → quote → bind → lost)
+- Preview agencies: Blitz, Macario, Demo (`demo@harperinsure.com`)
+- Sample data only — not production auth or live lead wiring
 
 ## Design system
 
