@@ -57,6 +57,13 @@ export function TrackPortal() {
             email: data.email,
             agency: data.agency,
           });
+          const counts = data.agency.summary.byStage as Record<
+            LeadStage,
+            number
+          >;
+          const firstWithLeads =
+            STAGES.find((s) => (counts?.[s] ?? 0) > 0) ?? "ingested";
+          setStage(firstWithLeads);
         } else {
           setSession({ status: "anonymous" });
         }
@@ -89,7 +96,10 @@ export function TrackPortal() {
         email: data.email,
         agency: data.agency,
       });
-      setStage("ingested");
+      const counts = data.agency.summary.byStage as Record<LeadStage, number>;
+      const firstWithLeads =
+        STAGES.find((s) => (counts?.[s] ?? 0) > 0) ?? "ingested";
+      setStage(firstWithLeads);
       setQuery("");
     } catch {
       setError("Something went wrong. Please try again.");

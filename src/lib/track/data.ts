@@ -155,10 +155,11 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
         state: "NJ",
         revenue: "—",
         received: "Jul 24, 2026",
-        owner: "Intake · Corey",
-        statusDetail: "Application received · missing info — intake chasing.",
+        owner: "Quoted · Larry Crowder",
+        statusDetail:
+          "SiriusPoint quote out (ISC #4088365). Customer reviewing — deciding when to purchase.",
         premium: null,
-        stage: "ingested",
+        stage: "quoted",
       },
       {
         id: "MC-1002",
@@ -167,8 +168,9 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
         state: "TX",
         revenue: "—",
         received: "Jul 23, 2026",
-        owner: "Quoting · Brison",
-        statusDetail: "Submitted · UW follow-up in progress.",
+        owner: "Quoted · UW chase",
+        statusDetail:
+          "Biberk quote in progress — waiting on employee count, payroll, and 941/1096 docs.",
         premium: null,
         stage: "quoted",
       },
