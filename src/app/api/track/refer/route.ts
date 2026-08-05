@@ -4,10 +4,12 @@ import {
   DUMBLY_SESSION_URL,
   PARTNER_CLASS_OPTIONS,
   PARTNER_REVENUE_OPTIONS,
+  classLabel,
   type PartnerClassCode,
   type PartnerReferralPayload,
   sessionCreateBody,
 } from "@/lib/track/referral";
+import { registerPartnerReferral } from "@/lib/track/live-leads";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const ZIP_RE = /^[0-9]{5}(-[0-9]{4})?$/;
@@ -119,6 +121,20 @@ export async function POST(request: Request) {
     const data = (await res.json().catch(() => ({}))) as {
       sessionId?: string;
     };
+
+    try {
+      await registerPartnerReferral({
+        agency: session.agency,
+        businessName: payload.businessName,
+        contactName: payload.contactName,
+        contactEmail: payload.email,
+        classLabel: classLabel(payload),
+        notes: payload.notes,
+        phone: payload.phone,
+      });
+    } catch (regErr) {
+      console.error("track refer registry write failed:", regErr);
+    }
 
     return NextResponse.json({
       ok: true,

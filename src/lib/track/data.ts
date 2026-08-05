@@ -147,46 +147,8 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
     ],
     domains: ["macarioinsurance.com"],
     referralInbox: "partners@harperinsure.com",
-    leads: [
-      {
-        id: "MC-1003",
-        business: "Maclean Development LLC",
-        classLabel: "GL — foreclosure rehab / construction",
-        state: "NJ",
-        revenue: "—",
-        received: "Jul 24, 2026",
-        owner: "Quoted · Larry Crowder",
-        statusDetail:
-          "SiriusPoint quote out (ISC #4088365). Customer reviewing — deciding when to purchase.",
-        premium: null,
-        stage: "quoted",
-      },
-      {
-        id: "MC-1002",
-        business: "PH Environmental Technologies LLC",
-        classLabel: "Workers compensation",
-        state: "TX",
-        revenue: "—",
-        received: "Jul 23, 2026",
-        owner: "Quoted · UW chase",
-        statusDetail:
-          "Biberk quote in progress — waiting on employee count, payroll, and 941/1096 docs.",
-        premium: null,
-        stage: "quoted",
-      },
-      {
-        id: "MC-1001",
-        business: "Triton Environmental",
-        classLabel: "Commercial auto",
-        state: "CA",
-        revenue: "—",
-        received: "Jul 21, 2026",
-        owner: "Lost · Bound elsewhere",
-        statusDetail: "Could not beat Geico on dealer timeline.",
-        premium: null,
-        stage: "lost",
-      },
-    ],
+    /** Live from Big Brother + partnerships referred-deal registry. */
+    leads: [],
   },
   {
     id: "brent",
@@ -199,21 +161,8 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
     ],
     domains: [],
     referralInbox: "partnerships@harperinsure.com",
-    leads: [
-      {
-        id: "BU-1001",
-        business: "Skyland Homes",
-        classLabel: "Commercial auto",
-        state: "GA",
-        revenue: "—",
-        received: "Aug 5, 2026",
-        owner: "Intake · Brison",
-        statusDetail:
-          "Warm intro from Brent (Suresh Sajja). Loss runs + IDs with Brison — quoting in progress. Not in Big Brother yet.",
-        premium: null,
-        stage: "ingested",
-      },
-    ],
+    /** Live from Big Brother + partnerships referred-deal registry. */
+    leads: [],
   },
   {
     id: "faith",

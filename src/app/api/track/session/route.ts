@@ -7,6 +7,27 @@ import {
   TRACK_COOKIE,
 } from "@/lib/track/session";
 import { isValidEmail, normalizeEmail, summarizeLeads } from "@/lib/track/data";
+import { getLiveLeadsForAgency } from "@/lib/track/live-leads";
+
+async function agencyPayload(
+  email: string,
+  agency: NonNullable<ReturnType<typeof resolveAgencyForEmail>>,
+) {
+  const { leads, source } = await getLiveLeadsForAgency(agency);
+  return {
+    authenticated: true as const,
+    email,
+    agency: {
+      id: agency.id,
+      name: agency.name,
+      shortName: agency.shortName,
+      referralInbox: agency.referralInbox,
+      leads,
+      summary: summarizeLeads(leads),
+      dataSource: source,
+    },
+  };
+}
 
 export async function GET() {
   const session = await getTrackSession();
@@ -14,19 +35,9 @@ export async function GET() {
     return NextResponse.json({ authenticated: false });
   }
 
-  const summary = summarizeLeads(session.agency.leads);
-  return NextResponse.json({
-    authenticated: true,
-    email: session.email,
-    agency: {
-      id: session.agency.id,
-      name: session.agency.name,
-      shortName: session.agency.shortName,
-      referralInbox: session.agency.referralInbox,
-      leads: session.agency.leads,
-      summary,
-    },
-  });
+  return NextResponse.json(
+    await agencyPayload(session.email, session.agency),
+  );
 }
 
 export async function POST(request: Request) {
@@ -62,18 +73,7 @@ export async function POST(request: Request) {
   }
 
   const token = createSessionToken(email, agency);
-  const response = NextResponse.json({
-    authenticated: true,
-    email,
-    agency: {
-      id: agency.id,
-      name: agency.name,
-      shortName: agency.shortName,
-      referralInbox: agency.referralInbox,
-      leads: agency.leads,
-      summary: summarizeLeads(agency.leads),
-    },
-  });
+  const response = NextResponse.json(await agencyPayload(email, agency));
   response.cookies.set(TRACK_COOKIE, token, cookieOptions());
   return response;
 }
