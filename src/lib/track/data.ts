@@ -139,7 +139,7 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
   {
     id: "macario",
     name: "Macario Insurance",
-    shortName: "Macario",
+    shortName: "Macario Insurance",
     emails: [
       "david@macarioinsurance.com",
       "davidmacario@macarioinsurance.com",

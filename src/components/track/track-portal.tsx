@@ -309,7 +309,10 @@ function Dashboard({
   }, [agency.leads, stage, query]);
 
   const meta = STAGE_META[stage];
-  const displayName = email.split("@")[0]?.replace(/[._]/g, " ") ?? email;
+  const displayName =
+    agency.id === "macario"
+      ? "David"
+      : email.split("@")[0]?.replace(/[._]/g, " ") ?? email;
 
   return (
     <div className="min-h-screen bg-ember-beige-02">
