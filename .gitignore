@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local scratch / Rob package extract
+/tmp/
+blitz-referral-form-package.zip
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

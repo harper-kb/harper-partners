@@ -42,8 +42,10 @@ Marketing landing (`src/app/(marketing)/page.tsx`):
 Partner Track portal (`/track`):
 
 - Email-gated agency dashboard (intake → quote → bind → lost)
-- Preview agencies: Blitz, Macario, Demo (`demo@harperinsure.com`)
-- Sample data only — not production auth or live lead wiring
+- `/track/refer` — agency-branded referral form (Rob's Blitz package, generalized)
+  posts into Harper session-create Lambda → Big Brother
+- Preview agencies: Blitz, Macario, Brent, Faith, Demo
+- Sample lead data for layout; live referrals go through the refer form
 
 ## Design system
 

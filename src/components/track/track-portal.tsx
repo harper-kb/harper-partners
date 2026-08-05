@@ -331,6 +331,12 @@ function Dashboard({
             </Link>
           </div>
           <div className="flex items-center gap-3 sm:gap-5">
+            <Link
+              href="/track/refer"
+              className="cta-button-standalone text-sm no-underline whitespace-nowrap"
+            >
+              Refer a new lead
+            </Link>
             <span className="hidden md:inline text-sm text-ember-creme/70 capitalize truncate max-w-[14rem]">
               {displayName}
             </span>
@@ -360,6 +366,18 @@ function Dashboard({
             lands here. Follow it from intake to quote to bind, without chasing
             for status.
           </p>
+
+          <div className="mb-8">
+            <Link
+              href="/track/refer"
+              className="cta-button-primary inline-flex no-underline"
+            >
+              Refer a new lead
+              <span className="material-symbols-outlined text-lg">
+                arrow_outward
+              </span>
+            </Link>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
             <StatCard

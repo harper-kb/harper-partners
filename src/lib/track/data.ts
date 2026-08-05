@@ -216,6 +216,19 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
     ],
   },
   {
+    id: "faith",
+    name: "Faith Insurance Solutions",
+    shortName: "Faith",
+    emails: [
+      "faith@faithinsurancesolutions.com",
+      "faithbratlie@gmail.com",
+      "faith@harperinsure.com",
+    ],
+    domains: ["faithinsurancesolutions.com"],
+    referralInbox: "partnerships@harperinsure.com",
+    leads: [],
+  },
+  {
     id: "demo",
     name: "Harper Demo Agency",
     shortName: "Demo",
