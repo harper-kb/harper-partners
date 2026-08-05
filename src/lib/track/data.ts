@@ -189,6 +189,33 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
     ],
   },
   {
+    id: "brent",
+    name: "Brent Underwood — Farmers Insurance",
+    shortName: "Brent",
+    emails: [
+      "bunderwood@farmersagent.com",
+      "brent@farmersagent.com",
+      "brent.underwood@farmersagent.com",
+    ],
+    domains: [],
+    referralInbox: "partnerships@harperinsure.com",
+    leads: [
+      {
+        id: "BU-1001",
+        business: "Skyland Homes",
+        classLabel: "Commercial auto",
+        state: "GA",
+        revenue: "—",
+        received: "Aug 5, 2026",
+        owner: "Intake · Brison",
+        statusDetail:
+          "Warm intro from Brent (Suresh Sajja). Loss runs + IDs with Brison — quoting in progress. Not in Big Brother yet.",
+        premium: null,
+        stage: "ingested",
+      },
+    ],
+  },
+  {
     id: "demo",
     name: "Harper Demo Agency",
     shortName: "Demo",
