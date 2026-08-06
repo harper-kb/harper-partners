@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       referralId: saved.id,
       ingest: "deferred",
       message:
-        "Referral received. Harper partnerships has it — the customer was not put through Weblead or sent an inquiry text.",
+        "Referral received. Harper will chase this lead.",
       partner: {
         id: BLITZ_AGENCY.id,
         shortName: BLITZ_AGENCY.shortName,
