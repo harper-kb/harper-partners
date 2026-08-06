@@ -10,6 +10,11 @@ import {
   sessionCreateBody,
 } from "@/lib/track/referral";
 import { registerPartnerReferral } from "@/lib/track/live-leads";
+import {
+  markPartnerReferralIngestFailed,
+  markPartnerReferralIngested,
+  savePartnerReferralForm,
+} from "@/lib/track/referral-store";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const ZIP_RE = /^[0-9]{5}(-[0-9]{4})?$/;
@@ -98,7 +103,31 @@ export async function POST(request: Request) {
   const origin =
     request.headers.get("origin") || "https://partners.harperinsure.com";
   const pageUrl = `${origin.replace(/\/$/, "")}/track/refer`;
+  const userAgent = request.headers.get("user-agent")?.slice(0, 500) ?? null;
 
+  // 1) Always persist to partnerships.partner_referrals first (pacing source of truth).
+  let referralId: string;
+  try {
+    const saved = await savePartnerReferralForm({
+      payload,
+      partnerEmail: session.email,
+      pageUrl,
+      userAgent,
+    });
+    referralId = saved.id;
+  } catch (err) {
+    console.error("track refer supabase insert failed:", err);
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "Could not save this referral. Try again, or email partnerships@harperinsure.com.",
+      },
+      { status: 500 },
+    );
+  }
+
+  // 2) Send into Harper intake (Lambda). Row stays even if this fails.
   try {
     const res = await fetch(DUMBLY_SESSION_URL, {
       method: "POST",
@@ -109,10 +138,16 @@ export async function POST(request: Request) {
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       console.error("track refer session-create failed:", res.status, errText);
+      await markPartnerReferralIngestFailed(
+        referralId,
+        `session-create ${res.status}: ${errText.slice(0, 400)}`,
+      ).catch((e) => console.error("ingest failed mark error:", e));
+
       return NextResponse.json(
         {
           ok: false,
-          message: `Lead ingest failed (${res.status}). Try again, or email partnerships@harperinsure.com.`,
+          referralId,
+          message: `Lead saved for partnerships, but Harper intake failed (${res.status}). We will retry — or email partnerships@harperinsure.com.`,
         },
         { status: 502 },
       );
@@ -122,6 +157,11 @@ export async function POST(request: Request) {
       sessionId?: string;
     };
 
+    await markPartnerReferralIngested(referralId, data.sessionId ?? null).catch(
+      (e) => console.error("ingest sent mark error:", e),
+    );
+
+    // Best-effort: also mirror into partnership_accounts for Partner Track dashboard.
     try {
       await registerPartnerReferral({
         agency: session.agency,
@@ -138,6 +178,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      referralId,
       sessionId: data.sessionId,
       message:
         "Referral received and sent into Harper intake. We will chase this lead.",
@@ -148,11 +189,17 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("track refer network error:", err);
+    await markPartnerReferralIngestFailed(
+      referralId,
+      err instanceof Error ? err.message : "network error",
+    ).catch((e) => console.error("ingest failed mark error:", e));
+
     return NextResponse.json(
       {
         ok: false,
+        referralId,
         message:
-          "Network error reaching Harper intake. Try again, or email partnerships@harperinsure.com.",
+          "Lead saved for partnerships, but intake network failed. We will retry — or email partnerships@harperinsure.com.",
       },
       { status: 502 },
     );
