@@ -32,9 +32,14 @@ export type PartnerReferralRow = {
 
 export type SavePartnerReferralInput = {
   payload: PartnerReferralPayload;
-  partnerEmail: string;
+  partnerEmail?: string | null;
   pageUrl: string;
   userAgent?: string | null;
+  /** Defaults to partners_track_refer */
+  source?: string;
+  /** Defaults to pending; use deferred when skipping Weblead */
+  ingestStatus?: "pending" | "deferred" | "sent" | "failed";
+  ingestNote?: string;
 };
 
 /** Persist a Partner Track referral form row (pacing / SDR source of truth). */
@@ -44,6 +49,9 @@ export async function savePartnerReferralForm(
   const sql = getSql();
   const { payload, partnerEmail, pageUrl, userAgent } = input;
   const label = classLabel(payload);
+  const source = input.source ?? "partners_track_refer";
+  const ingestStatus = input.ingestStatus ?? "pending";
+  const ingestNote = input.ingestNote ?? null;
 
   const rows = await sql<{ id: string }[]>`
     insert into partnerships.partner_referrals (
@@ -66,6 +74,7 @@ export async function savePartnerReferralForm(
       notes,
       status,
       ingest_status,
+      ingest_error,
       source,
       page_url,
       user_agent
@@ -73,7 +82,7 @@ export async function savePartnerReferralForm(
       ${payload.partnerId},
       ${payload.partnerName},
       ${payload.partnerShortName},
-      ${partnerEmail},
+      ${partnerEmail ?? null},
       ${payload.contactName},
       ${payload.businessName},
       ${payload.phone},
@@ -88,8 +97,9 @@ export async function savePartnerReferralForm(
       ${label},
       ${payload.notes ?? null},
       ${"new"},
-      ${"pending"},
-      ${"partners_track_refer"},
+      ${ingestStatus},
+      ${ingestNote},
+      ${source},
       ${pageUrl},
       ${userAgent ?? null}
     )
