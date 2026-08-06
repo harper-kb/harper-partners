@@ -215,6 +215,16 @@ export const PARTNER_AGENCIES: PartnerAgency[] = [
       },
     ],
   },
+  {
+    id: "joanne-test",
+    name: "Joanne Test Agency",
+    shortName: "Joanne Test",
+    emails: ["joanne@harperinsure.com"],
+    domains: [],
+    referralInbox: "partners@harperinsure.com",
+    /** Empty starter — form fills + live BB/registry populate the dashboard. */
+    leads: [],
+  },
 ];
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;

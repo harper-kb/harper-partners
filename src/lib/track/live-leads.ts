@@ -42,6 +42,7 @@ const LIVE_AGENCY_MATCHERS: Record<string, RegExp> = {
   macario: /macario/i,
   brent: /brent|underwood/i,
   faith: /faith/i,
+  "joanne-test": /joanne test/i,
 };
 
 /** Agencies that still use curated sample leads (demo / marketing preview). */
@@ -284,6 +285,69 @@ async function loadOpsReferredDeals(agencyId: string): Promise<OpsReferredRow[]>
   });
 }
 
+type FormReferralRow = {
+  id: string;
+  business_name: string;
+  contact_name: string;
+  class_label: string;
+  state: string;
+  revenue: string;
+  notes: string | null;
+  status: string;
+  ingest_status: string;
+  created_at: string;
+};
+
+async function loadFormReferrals(agencyId: string): Promise<FormReferralRow[]> {
+  const sql = getSql();
+  return sql<FormReferralRow[]>`
+    select
+      id::text as id,
+      business_name,
+      contact_name,
+      class_label,
+      state,
+      revenue,
+      notes,
+      status,
+      ingest_status,
+      created_at::text as created_at
+    from partnerships.partner_referrals
+    where partner_id = ${agencyId}
+    order by created_at desc
+    limit 100
+  `;
+}
+
+function leadFromFormRow(row: FormReferralRow): PartnerLead {
+  const stage: LeadStage =
+    row.status === "lost" || row.status === "closed_lost"
+      ? "lost"
+      : row.status === "bound"
+        ? "bound"
+        : row.status === "quoted"
+          ? "quoted"
+          : "ingested";
+  const ingestNote =
+    row.ingest_status === "failed"
+      ? "Saved to partnerships — Harper intake failed (retry needed)."
+      : row.ingest_status === "sent"
+        ? "Sent into Harper intake."
+        : "Saved — intake pending.";
+  return {
+    id: `FR-${row.id.slice(0, 8)}`,
+    business: row.business_name,
+    classLabel: row.class_label || "Commercial",
+    state: row.state || "—",
+    revenue: row.revenue || "—",
+    received: formatReceived(row.created_at),
+    owner: `${stageLabelOwner(stage)} · Form submit`,
+    statusDetail: [ingestNote, row.notes].filter(Boolean).join(" — ").slice(0, 280),
+    premium: null,
+    stage,
+  };
+}
+
 /**
  * Live Partner Track leads: ops referred-deal registry + live BB company stages.
  * Falls back to sample leads only when live mode is off for the agency.
@@ -296,7 +360,13 @@ export async function getLiveLeadsForAgency(
   }
 
   try {
-    const opsRows = await loadOpsReferredDeals(agency.id);
+    const [opsRows, formRows] = await Promise.all([
+      loadOpsReferredDeals(agency.id),
+      loadFormReferrals(agency.id).catch((err) => {
+        console.error("loadFormReferrals failed:", err);
+        return [] as FormReferralRow[];
+      }),
+    ]);
     const tag = partnerTag(agency.shortName);
 
     let tagged: BbCompanyRow[] = [];
@@ -318,27 +388,40 @@ export async function getLiveLeadsForAgency(
 
     const leads: PartnerLead[] = [];
     const seenBb = new Set<number>();
+    const seenBusiness = new Set<string>();
 
     for (const row of opsRows) {
       const meta = parseReferredMeta(row.summary) || {};
       const bbId = typeof meta.bb === "number" && meta.bb > 0 ? meta.bb : null;
       if (bbId && byId.has(bbId)) {
         seenBb.add(bbId);
-        leads.push(
-          leadFromBb(byId.get(bbId)!, {
-            classLabel: meta.line || row.vertical || undefined,
-            notes: row.status_label || meta.notes,
-          }),
-        );
+        const lead = leadFromBb(byId.get(bbId)!, {
+          classLabel: meta.line || row.vertical || undefined,
+          notes: row.status_label || meta.notes,
+        });
+        seenBusiness.add(lead.business.toLowerCase());
+        leads.push(lead);
         continue;
       }
-      leads.push(leadFromOpsOnly(row, meta));
+      const lead = leadFromOpsOnly(row, meta);
+      seenBusiness.add(lead.business.toLowerCase());
+      leads.push(lead);
     }
 
     for (const row of tagged) {
       if (seenBb.has(row.id)) continue;
       seenBb.add(row.id);
-      leads.push(leadFromBb(row));
+      const lead = leadFromBb(row);
+      seenBusiness.add(lead.business.toLowerCase());
+      leads.push(lead);
+    }
+
+    // Form table rows (so test fills show even before BB / referred-deal mirror).
+    for (const row of formRows) {
+      const key = row.business_name.toLowerCase();
+      if (seenBusiness.has(key)) continue;
+      seenBusiness.add(key);
+      leads.push(leadFromFormRow(row));
     }
 
     leads.sort((a, b) => {
