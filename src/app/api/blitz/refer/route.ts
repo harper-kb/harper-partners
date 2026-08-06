@@ -5,7 +5,7 @@ import {
   type PartnerClassCode,
   type PartnerReferralPayload,
 } from "@/lib/track/referral";
-import { savePartnerReferralForm } from "@/lib/track/referral-store";
+import { saveBlitzReferralForm } from "@/lib/track/blitz-store";
 
 const BLITZ_AGENCY = {
   id: "blitz",
@@ -28,7 +28,7 @@ function str(value: unknown, max: number) {
 
 /**
  * Public Blitz referral submit.
- * Writes to partnerships.partner_referrals only — never Weblead / inquiry SMS.
+ * Writes to partnerships.partner_blitz only — never Weblead / inquiry SMS.
  */
 export async function POST(request: Request) {
   let body: unknown;
@@ -99,15 +99,10 @@ export async function POST(request: Request) {
   const userAgent = request.headers.get("user-agent")?.slice(0, 500) ?? null;
 
   try {
-    const saved = await savePartnerReferralForm({
+    const saved = await saveBlitzReferralForm({
       payload,
-      partnerEmail: null,
       pageUrl,
       userAgent,
-      source: "blitz_public_refer",
-      ingestStatus: "deferred",
-      ingestNote:
-        "Blitz public form — skipped Weblead ingest and inquiry SMS by design.",
     });
 
     return NextResponse.json({

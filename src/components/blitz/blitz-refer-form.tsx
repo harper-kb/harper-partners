@@ -354,9 +354,9 @@ export function BlitzReferForm() {
                   ) : null}
                 </button>
                 <p className="text-[0.7rem] text-ember-muted m-0 pt-1 leading-tight">
-                  Submissions are saved as Blitz partner referrals for Harper
-                  partnerships — not as web leads, and no automated inquiry text
-                  is sent to the customer.
+                  Submissions are saved to Harper partnerships (Blitz table) —
+                  not as web leads, and no automated inquiry text is sent to the
+                  customer.
                 </p>
               </form>
             </div>
