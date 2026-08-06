@@ -1,11 +1,15 @@
 /**
- * Partner Track referral form — same ingest door as Rob's Blitz package.
+ * Partner Track referral form.
  *
- * Browser → /api/track/refer → session-create Lambda → Rolodex → Hercules
- * → WEB_LEADS → Big Brother opportunity.
+ * Browser → /api/track/refer → partnerships.partner_referrals (ops Supabase).
  *
- * Tagged with sourceComponent = partners_track_refer and
- * [PARTNER:{AGENCY}] in the business description (agency-scoped, not Blitz-only).
+ * We deliberately do NOT POST to the dumbly session-create / WEB_LEADS door:
+ * that path treats the phone as a self-serve inquiry (Dakotah "thanks for
+ * submitting" SMS + Weblead Slack). Partner referrals are submitted by the
+ * agency on behalf of the customer — different SMS + routing needed first.
+ *
+ * Tagged for later intake with [PARTNER:{AGENCY}] once eng wires a
+ * referral-aware ingest (not consumer Weblead).
  */
 
 export type PartnerClassCode =
@@ -68,10 +72,17 @@ export const PARTNER_REVENUE_OPTIONS: { value: string; label: string }[] = [
   { value: "5m_plus", label: "$5M+" },
 ];
 
-/** Same session-create Lambda as harperinsure.com quote forms / Blitz refer. */
+/** Same session-create Lambda as quote forms — NOT used for Partner Track yet. */
 export const DUMBLY_SESSION_URL =
   "https://fzvdgnq2hd2oydnezildd5xdoi0yybwj.lambda-url.us-east-1.on.aws/";
 
+/**
+ * When true, also POST to session-create (WEB_LEADS / Dakotah inquiry SMS).
+ * Default off — partner referrals must not use the consumer inquiry path.
+ */
+export function partnerReferWebleadIngestEnabled() {
+  return process.env.PARTNER_REFER_ENABLE_WEBLEAD_INGEST === "true";
+}
 export const PARTNERS_NOTIFY_EMAIL = "partnerships@harperinsure.com";
 export const PARTNERS_SOURCE_COMPONENT = "partners_track_refer";
 

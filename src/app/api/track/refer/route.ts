@@ -5,12 +5,14 @@ import {
   PARTNER_CLASS_OPTIONS,
   PARTNER_REVENUE_OPTIONS,
   classLabel,
+  partnerReferWebleadIngestEnabled,
   type PartnerClassCode,
   type PartnerReferralPayload,
   sessionCreateBody,
 } from "@/lib/track/referral";
 import { registerPartnerReferral } from "@/lib/track/live-leads";
 import {
+  markPartnerReferralDeferred,
   markPartnerReferralIngestFailed,
   markPartnerReferralIngested,
   savePartnerReferralForm,
@@ -27,6 +29,24 @@ const ALLOWED_REVENUE = new Set(
 
 function str(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+async function mirrorDashboard(session: {
+  agency: Parameters<typeof registerPartnerReferral>[0]["agency"];
+}, payload: PartnerReferralPayload) {
+  try {
+    await registerPartnerReferral({
+      agency: session.agency,
+      businessName: payload.businessName,
+      contactName: payload.contactName,
+      contactEmail: payload.email,
+      classLabel: classLabel(payload),
+      notes: payload.notes,
+      phone: payload.phone,
+    });
+  } catch (regErr) {
+    console.error("track refer registry write failed:", regErr);
+  }
 }
 
 export async function POST(request: Request) {
@@ -105,7 +125,7 @@ export async function POST(request: Request) {
   const pageUrl = `${origin.replace(/\/$/, "")}/track/refer`;
   const userAgent = request.headers.get("user-agent")?.slice(0, 500) ?? null;
 
-  // 1) Always persist to partnerships.partner_referrals first (pacing source of truth).
+  // Always persist to partnerships.partner_referrals (pacing source of truth).
   let referralId: string;
   try {
     const saved = await savePartnerReferralForm({
@@ -127,7 +147,30 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2) Send into Harper intake (Lambda). Row stays even if this fails.
+  // Default: do NOT send through WEB_LEADS / Dakotah inquiry SMS.
+  // Opt-in only via PARTNER_REFER_ENABLE_WEBLEAD_INGEST=true once referral SMS exists.
+  if (!partnerReferWebleadIngestEnabled()) {
+    await markPartnerReferralDeferred(
+      referralId,
+      "Skipped Weblead ingest — partner referral (not a self-serve inquiry). Awaiting referral-aware SMS + routing.",
+    ).catch((e) => console.error("deferred mark error:", e));
+
+    await mirrorDashboard(session, payload);
+
+    return NextResponse.json({
+      ok: true,
+      referralId,
+      ingest: "deferred",
+      message:
+        "Referral saved for partnerships. Harper will chase this lead — the customer was not put through Weblead or sent the inquiry text.",
+      partner: {
+        id: session.agency.id,
+        shortName: session.agency.shortName,
+      },
+    });
+  }
+
+  // Optional legacy Weblead path (off by default).
   try {
     const res = await fetch(DUMBLY_SESSION_URL, {
       method: "POST",
@@ -161,25 +204,13 @@ export async function POST(request: Request) {
       (e) => console.error("ingest sent mark error:", e),
     );
 
-    // Best-effort: also mirror into partnership_accounts for Partner Track dashboard.
-    try {
-      await registerPartnerReferral({
-        agency: session.agency,
-        businessName: payload.businessName,
-        contactName: payload.contactName,
-        contactEmail: payload.email,
-        classLabel: classLabel(payload),
-        notes: payload.notes,
-        phone: payload.phone,
-      });
-    } catch (regErr) {
-      console.error("track refer registry write failed:", regErr);
-    }
+    await mirrorDashboard(session, payload);
 
     return NextResponse.json({
       ok: true,
       referralId,
       sessionId: data.sessionId,
+      ingest: "weblead",
       message:
         "Referral received and sent into Harper intake. We will chase this lead.",
       partner: {

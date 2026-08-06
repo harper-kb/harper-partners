@@ -331,9 +331,11 @@ function leadFromFormRow(row: FormReferralRow): PartnerLead {
   const ingestNote =
     row.ingest_status === "failed"
       ? "Saved to partnerships — Harper intake failed (retry needed)."
-      : row.ingest_status === "sent"
-        ? "Sent into Harper intake."
-        : "Saved — intake pending.";
+      : row.ingest_status === "deferred"
+        ? "Saved for partnerships — not sent through Weblead."
+        : row.ingest_status === "sent"
+          ? "Sent into Harper intake."
+          : "Saved — intake pending.";
   return {
     id: `FR-${row.id.slice(0, 8)}`,
     business: row.business_name,

@@ -118,6 +118,20 @@ export async function markPartnerReferralIngested(
   `;
 }
 
+/** Saved for partnerships / pacing — intentionally not sent through Weblead. */
+export async function markPartnerReferralDeferred(id: string, reason: string) {
+  const sql = getSql();
+  await sql`
+    update partnerships.partner_referrals
+    set
+      ingest_status = ${"deferred"},
+      ingest_error = ${reason.slice(0, 1000)},
+      status = ${"new"},
+      updated_at = now()
+    where id = ${id}::uuid
+  `;
+}
+
 export async function markPartnerReferralIngestFailed(
   id: string,
   error: string,
