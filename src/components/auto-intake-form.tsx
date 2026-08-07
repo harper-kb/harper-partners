@@ -147,6 +147,8 @@ function Text({
   type = "text",
   inputMode,
   required,
+  min,
+  max,
 }: {
   label: string;
   name: string;
@@ -158,6 +160,8 @@ function Text({
   type?: string;
   inputMode?: "text" | "tel" | "numeric" | "decimal";
   required?: boolean;
+  min?: string;
+  max?: string;
 }) {
   return (
     <label className="block">
@@ -171,6 +175,8 @@ function Text({
         type={type}
         inputMode={inputMode}
         maxLength={300}
+        min={min}
+        max={max}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="form-input-light text-sm"
@@ -299,6 +305,8 @@ export function AutoIntakeForm() {
         need("priorCarrier", "Who was the carrier?");
         need("priorLosses", "Please answer.");
         need("renewalOffered", "Please answer.");
+        if (answers.renewalOffered === "No")
+          need("renewalNotOfferedReason", "A quick reason is fine.");
       }
     }
     if (current === 3) {
@@ -574,6 +582,8 @@ export function AutoIntakeForm() {
                 label="Owner's date of birth"
                 name="ownerDob"
                 type="date"
+                min="1920-01-01"
+                max="2005-12-31"
                 value={answers.ownerDob ?? ""}
                 onChange={set("ownerDob")}
                 error={errors.ownerDob}
@@ -621,6 +631,8 @@ export function AutoIntakeForm() {
                     label="Other owner's date of birth"
                     name="otherOwnerDob"
                     type="date"
+                    min="1920-01-01"
+                    max="2005-12-31"
                     value={answers.otherOwnerDob ?? ""}
                     onChange={set("otherOwnerDob")}
                     error={errors.otherOwnerDob}
@@ -687,6 +699,17 @@ export function AutoIntakeForm() {
                   error={errors.renewalOffered}
                   required
                 />
+                {answers.renewalOffered === "No" && (
+                  <Text
+                    label="Why aren't they offering renewal?"
+                    name="renewalNotOfferedReason"
+                    value={answers.renewalNotOfferedReason ?? ""}
+                    onChange={set("renewalNotOfferedReason")}
+                    placeholder="A quick reason is fine"
+                    error={errors.renewalNotOfferedReason}
+                    required
+                  />
+                )}
                 <YesNo
                   label="Any losses or claims?"
                   value={answers.priorLosses ?? ""}
@@ -776,8 +799,11 @@ export function AutoIntakeForm() {
             <Choice
               label="Where are vehicle keys kept?"
               options={[
-                "Key cabinet or safe in the office",
-                "Lockbox mounted on the vehicle",
+                "Key cabinet in the office",
+                "Safe in the office",
+                "Locked drawer or desk in the office",
+                "Owner takes them home",
+                "Carried by owner / staff",
                 "Somewhere else",
               ]}
               value={answers.keysStored ?? ""}

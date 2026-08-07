@@ -287,6 +287,7 @@ const AUTO_INTAKE_LABELS: [string, string][] = [
   ["priorCarrier", "Prior carrier"],
   ["priorPremium", "Prior premium ($/yr)"],
   ["renewalOffered", "Current insurer offering renewal"],
+  ["renewalNotOfferedReason", "Why no renewal offer"],
   ["priorLosses", "Losses or claims"],
   ["lossDetails", "Loss details"],
   ["everCanceled", "Policy ever canceled"],
