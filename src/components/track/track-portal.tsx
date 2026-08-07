@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useAuth,
+} from "@clerk/nextjs";
 import type { LeadStage, PartnerLead } from "@/lib/track/data";
 import { STAGE_META } from "@/lib/track/data";
 
@@ -23,6 +29,7 @@ type AgencyView = {
 type SessionState =
   | { status: "loading" }
   | { status: "anonymous" }
+  | { status: "denied"; email: string; message: string }
   | { status: "signed-in"; email: string; agency: AgencyView };
 
 const STAGES: LeadStage[] = ["ingested", "quoted", "bound", "lost"];
@@ -37,21 +44,25 @@ function formatMoney(n: number) {
 }
 
 export function TrackPortal() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [session, setSession] = useState<SessionState>({ status: "loading" });
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [stage, setStage] = useState<LeadStage>("ingested");
   const [query, setQuery] = useState("");
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setSession({ status: "anonymous" });
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/track/session", { cache: "no-store" });
         const data = await res.json();
         if (cancelled) return;
-        if (data.authenticated) {
+        if (data.authenticated && data.agency) {
           setSession({
             status: "signed-in",
             email: data.email,
@@ -64,6 +75,14 @@ export function TrackPortal() {
           const firstWithLeads =
             STAGES.find((s) => (counts?.[s] ?? 0) > 0) ?? "ingested";
           setStage(firstWithLeads);
+        } else if (data.authenticated) {
+          setSession({
+            status: "denied",
+            email: data.email || "",
+            message:
+              data.error ||
+              "This email isn't enabled for Partner Track yet.",
+          });
         } else {
           setSession({ status: "anonymous" });
         }
@@ -74,48 +93,9 @@ export function TrackPortal() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
-  async function signIn(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/track/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Could not sign in.");
-        return;
-      }
-      setSession({
-        status: "signed-in",
-        email: data.email,
-        agency: data.agency,
-      });
-      const counts = data.agency.summary.byStage as Record<LeadStage, number>;
-      const firstWithLeads =
-        STAGES.find((s) => (counts?.[s] ?? 0) > 0) ?? "ingested";
-      setStage(firstWithLeads);
-      setQuery("");
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function signOut() {
-    await fetch("/api/track/session", { method: "DELETE" });
-    setSession({ status: "anonymous" });
-    setEmail("");
-    setError(null);
-  }
-
-  if (session.status === "loading") {
+  if (!isLoaded || session.status === "loading") {
     return (
       <div className="min-h-screen bg-ember-beige-02 flex items-center justify-center text-ember-muted text-sm">
         Opening partner track…
@@ -124,15 +104,11 @@ export function TrackPortal() {
   }
 
   if (session.status === "anonymous") {
-    return (
-      <SignInScreen
-        email={email}
-        setEmail={setEmail}
-        error={error}
-        submitting={submitting}
-        onSubmit={signIn}
-      />
-    );
+    return <ClerkSignInScreen />;
+  }
+
+  if (session.status === "denied") {
+    return <AccessDeniedScreen email={session.email} message={session.message} />;
   }
 
   return (
@@ -143,24 +119,11 @@ export function TrackPortal() {
       setStage={setStage}
       query={query}
       setQuery={setQuery}
-      onSignOut={signOut}
     />
   );
 }
 
-function SignInScreen({
-  email,
-  setEmail,
-  error,
-  submitting,
-  onSubmit,
-}: {
-  email: string;
-  setEmail: (v: string) => void;
-  error: string | null;
-  submitting: boolean;
-  onSubmit: (e: FormEvent) => void;
-}) {
+function ClerkSignInScreen() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-ember-beige-02">
       <section className="hero-prestige relative flex flex-col px-6 sm:px-10 lg:px-14 py-8 lg:py-10">
@@ -191,20 +154,12 @@ function SignInScreen({
         </div>
 
         <p className="relative z-10 text-ember-creme/45 text-xs m-0 hidden lg:block">
-          Email-based access · sample data for layout review
+          Secure sign-in with Clerk
         </p>
       </section>
 
       <section className="relative flex flex-col px-6 sm:px-10 lg:px-14 py-8 lg:py-10">
-        <div
-          className="pointer-events-none absolute inset-0 overflow-hidden"
-          aria-hidden
-        >
-          <div className="absolute -right-[18%] -top-[8%] w-[70%] h-[55%] border border-ember-salmon/25 rounded-[50%] rotate-[-12deg]" />
-          <div className="absolute -right-[8%] top-[18%] w-[48%] h-[42%] border border-ember-salmon/15 rounded-[50%] rotate-[-18deg]" />
-        </div>
-
-        <div className="relative z-10 flex justify-end">
+        <div className="relative z-10 flex justify-end gap-4">
           <Link
             href="/"
             className="text-sm text-ember-muted hover:text-ember-blue transition-colors no-underline"
@@ -214,60 +169,67 @@ function SignInScreen({
         </div>
 
         <div className="relative z-10 flex-1 flex items-center justify-center py-10">
-          <form
-            onSubmit={onSubmit}
-            className="w-full max-w-[420px] bg-white border border-ember-rule rounded-[10px] shadow-[0_18px_50px_rgba(29,58,71,0.08)] p-7 sm:p-8"
-          >
+          <div className="w-full max-w-[420px] bg-white border border-ember-rule rounded-[10px] shadow-[0_18px_50px_rgba(29,58,71,0.08)] p-7 sm:p-8">
             <h2 className="display-serif text-ember-blue text-[1.75rem] font-normal m-0 mb-2">
               Sign in
             </h2>
             <p className="text-ember-muted text-sm leading-relaxed m-0 mb-7">
-              Enter your work email to open your agency&apos;s lead dashboard.
+              Use your work email to open your agency&apos;s lead dashboard.
             </p>
-
-            <label className="block mb-5">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-ember-muted mb-2">
-                Work email
-              </span>
-              <input
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@youragency.com"
-                className="w-full h-11 px-3.5 rounded-md border border-ember-rule bg-white text-ember-blue text-sm outline-none focus:border-ember-salmon focus:ring-2 focus:ring-ember-salmon/20"
-              />
-            </label>
-
-            {error ? (
-              <p className="text-sm text-ember-salmon-700 m-0 mb-4" role="alert">
-                {error}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="cta-button-primary w-full justify-center rounded-md border-0 cursor-pointer"
-            >
-              {submitting ? "Checking…" : "Enter portal"}
-            </button>
-
+            <div className="flex flex-col gap-3">
+              <SignInButton mode="modal" forceRedirectUrl="/track">
+                <button
+                  type="button"
+                  className="cta-button-primary w-full justify-center rounded-md border-0 cursor-pointer"
+                >
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal" forceRedirectUrl="/track">
+                <button
+                  type="button"
+                  className="w-full h-11 rounded-md border border-ember-rule bg-white text-ember-blue text-sm font-medium cursor-pointer hover:border-ember-blue/40"
+                >
+                  Create account
+                </button>
+              </SignUpButton>
+            </div>
             <p className="text-[11px] leading-relaxed text-ember-muted/80 m-0 mt-5">
-              Preview access:{" "}
-              <code className="text-ember-blue/80">demo@harperinsure.com</code>,{" "}
-              <code className="text-ember-blue/80">
-                landon@blitzinsurance.com
-              </code>
-              , or any{" "}
-              <code className="text-ember-blue/80">@blitzinsurance.com</code> /{" "}
-              <code className="text-ember-blue/80">@macarioinsurance.com</code>{" "}
-              email. Email gate only — not production auth.
+              After sign-in, your Clerk email must match an enabled partner
+              agency (e.g.{" "}
+              <code className="text-ember-blue/80">joanne@harperinsure.com</code>
+              ).
             </p>
-          </form>
+          </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function AccessDeniedScreen({
+  email,
+  message,
+}: {
+  email: string;
+  message: string;
+}) {
+  return (
+    <div className="min-h-screen bg-ember-beige-02 flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-white border border-ember-rule rounded-lg p-8 text-center">
+        <h1 className="display-serif text-ember-blue text-2xl m-0 mb-3">
+          Access not enabled
+        </h1>
+        <p className="text-ember-muted text-sm m-0 mb-2">{message}</p>
+        {email ? (
+          <p className="text-ember-blue text-sm m-0 mb-6">
+            Signed in as <strong>{email}</strong>
+          </p>
+        ) : null}
+        <div className="flex justify-center">
+          <UserButton />
+        </div>
+      </div>
     </div>
   );
 }
@@ -279,7 +241,6 @@ function Dashboard({
   setStage,
   query,
   setQuery,
-  onSignOut,
 }: {
   email: string;
   agency: AgencyView;
@@ -287,7 +248,6 @@ function Dashboard({
   setStage: (s: LeadStage) => void;
   query: string;
   setQuery: (q: string) => void;
-  onSignOut: () => void;
 }) {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -343,13 +303,7 @@ function Dashboard({
             <span className="hidden md:inline text-sm text-ember-creme/70 capitalize truncate max-w-[14rem]">
               {displayName}
             </span>
-            <button
-              type="button"
-              onClick={onSignOut}
-              className="text-sm font-medium text-ember-creme/70 hover:text-white transition-colors bg-transparent border-0 cursor-pointer p-0"
-            >
-              Sign out
-            </button>
+            <UserButton />
           </div>
         </div>
       </header>

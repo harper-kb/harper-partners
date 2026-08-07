@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import {
   PARTNER_CLASS_OPTIONS,
@@ -20,10 +21,12 @@ type AgencyBrief = {
 type Gate =
   | { status: "loading" }
   | { status: "anonymous" }
+  | { status: "denied"; message: string }
   | { status: "ready"; email: string; agency: AgencyBrief };
 
 export function ReferForm() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
   const [gate, setGate] = useState<Gate>({ status: "loading" });
   const [classCode, setClassCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -33,13 +36,19 @@ export function ReferForm() {
   } | null>(null);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setGate({ status: "anonymous" });
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/track/session", { cache: "no-store" });
         const data = await res.json();
         if (cancelled) return;
-        if (data.authenticated) {
+        if (data.authenticated && data.agency) {
           setGate({
             status: "ready",
             email: data.email,
@@ -48,6 +57,13 @@ export function ReferForm() {
               name: data.agency.name,
               shortName: data.agency.shortName,
             },
+          });
+        } else if (data.authenticated) {
+          setGate({
+            status: "denied",
+            message:
+              data.error ||
+              "This email isn't enabled for Partner Track yet.",
           });
         } else {
           setGate({ status: "anonymous" });
@@ -59,11 +75,11 @@ export function ReferForm() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (gate.status === "anonymous") {
-      router.replace("/track");
+      router.replace("/sign-in?redirect_url=/track/refer");
     }
   }, [gate.status, router]);
 
@@ -130,12 +146,24 @@ export function ReferForm() {
     }
   }
 
-  if (gate.status === "loading" || gate.status === "anonymous") {
+  if (
+    gate.status === "loading" ||
+    gate.status === "anonymous" ||
+    !isLoaded
+  ) {
     return (
       <div className="min-h-screen bg-ember-beige-02 flex items-center justify-center text-ember-muted text-sm">
         {gate.status === "anonymous"
           ? "Redirecting to sign in…"
           : "Opening referral form…"}
+      </div>
+    );
+  }
+
+  if (gate.status === "denied") {
+    return (
+      <div className="min-h-screen bg-ember-beige-02 flex items-center justify-center px-4 text-ember-muted text-sm">
+        {gate.message}
       </div>
     );
   }
@@ -419,8 +447,7 @@ export function ReferForm() {
                   ) : null}
                 </button>
                 <p className="text-[0.7rem] text-ember-muted m-0 pt-1 leading-tight">
-                  Submissions go into Harper intake (Big Brother) tagged as a{" "}
-                  {agency.shortName} referral.
+                  Submissions are saved as a {agency.shortName} partner referral.
                 </p>
               </form>
             </div>

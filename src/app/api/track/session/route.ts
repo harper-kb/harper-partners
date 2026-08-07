@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import {
-  cookieOptions,
-  createSessionToken,
-  getTrackSession,
   resolveAgencyForEmail,
-  TRACK_COOKIE,
 } from "@/lib/track/session";
-import { isValidEmail, normalizeEmail, summarizeLeads } from "@/lib/track/data";
+import { normalizeEmail, summarizeLeads } from "@/lib/track/data";
 import { getLiveLeadsForAgency } from "@/lib/track/live-leads";
 
-async function agencyPayload(
-  email: string,
-  agency: NonNullable<ReturnType<typeof resolveAgencyForEmail>>,
-) {
+async function agencyPayload(email: string) {
+  const agency = resolveAgencyForEmail(email);
+  if (!agency) {
+    return {
+      authenticated: true as const,
+      email,
+      agency: null,
+      error:
+        "You're signed in, but this email isn't enabled for Partner Track yet. Ask partnerships@harperinsure.com to add your agency.",
+    };
+  }
+
   const { leads, source } = await getLiveLeadsForAgency(agency);
   return {
     authenticated: true as const,
@@ -29,57 +34,45 @@ async function agencyPayload(
   };
 }
 
+function primaryEmail(
+  user: Awaited<ReturnType<typeof currentUser>>,
+): string | null {
+  if (!user) return null;
+  const primary = user.emailAddresses.find(
+    (e) => e.id === user.primaryEmailAddressId,
+  );
+  const raw = primary?.emailAddress || user.emailAddresses[0]?.emailAddress;
+  return raw ? normalizeEmail(raw) : null;
+}
+
 export async function GET() {
-  const session = await getTrackSession();
-  if (!session) {
+  const { userId } = await auth();
+  if (!userId) {
     return NextResponse.json({ authenticated: false });
   }
 
-  return NextResponse.json(
-    await agencyPayload(session.email, session.agency),
-  );
+  const user = await currentUser();
+  const email = primaryEmail(user);
+  if (!email) {
+    return NextResponse.json({
+      authenticated: true,
+      email: null,
+      agency: null,
+      error: "No email on this Clerk account.",
+    });
+  }
+
+  return NextResponse.json(await agencyPayload(email));
 }
 
-export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-
-  const email = normalizeEmail(
-    typeof (body as { email?: unknown })?.email === "string"
-      ? ((body as { email: string }).email ?? "")
-      : "",
-  );
-
-  if (!isValidEmail(email)) {
-    return NextResponse.json(
-      { error: "Enter a valid work email." },
-      { status: 400 },
-    );
-  }
-
-  const agency = resolveAgencyForEmail(email);
-  if (!agency) {
-    return NextResponse.json(
-      {
-        error:
-          "We don't recognize that partner email yet. Try a preview address (demo@harperinsure.com) or ask partnerships@harperinsure.com to enable your agency.",
-      },
-      { status: 403 },
-    );
-  }
-
-  const token = createSessionToken(email, agency);
-  const response = NextResponse.json(await agencyPayload(email, agency));
-  response.cookies.set(TRACK_COOKIE, token, cookieOptions());
-  return response;
+/** Clerk owns sign-in now — POST kept for compatibility, resolves current user. */
+export async function POST() {
+  return GET();
 }
 
 export async function DELETE() {
-  const response = NextResponse.json({ authenticated: false });
-  response.cookies.set(TRACK_COOKIE, "", { ...cookieOptions(), maxAge: 0 });
-  return response;
+  return NextResponse.json({
+    authenticated: false,
+    message: "Use Clerk sign-out (UserButton) to end your session.",
+  });
 }
