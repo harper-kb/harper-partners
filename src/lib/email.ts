@@ -414,7 +414,9 @@ export async function sendAutoIntakeNotification(params: {
     const gmail = getGmailClient();
     const raw = toBase64Url(
       buildMimeMessage({
-        from: FROM,
+        // Distinct display name so the inbox row doesn't just read "me" /
+        // "Harper Partners" — these are internal lead notifications.
+        from: `Auto Dealer Intake <${USER_GOOGLE_EMAIL}>`,
         to: "partnerships@harperinsure.com",
         replyTo: REPLY_TO,
         subject,
