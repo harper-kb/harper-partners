@@ -271,6 +271,8 @@ export function AutoIntakeForm() {
       need("phone", "Please enter a phone number.");
       need("mailingAddress", "Please enter the mailing address.");
       need("yearsExperience", "Required.");
+      need("yearsInBusiness", "Required.");
+      need("annualSales", "Rough number is fine.");
     }
     if (current === 1) {
       need("repossess", "Please answer.");
@@ -303,6 +305,8 @@ export function AutoIntakeForm() {
       need("addressMatch", "Please answer.");
       if (answers.addressMatch === "No") need("businessAddress", "Where is the lot?");
       need("oneLocation", "Please answer.");
+      if (answers.oneLocation === "No")
+        need("otherLocations", "Where else are vehicles kept?");
       need("lotSecurity", "Pick one.");
       need("keysStored", "Pick one.");
       need("firearms", "Please answer.");
@@ -484,7 +488,9 @@ export function AutoIntakeForm() {
                 inputMode="numeric"
                 value={answers.yearsInBusiness ?? ""}
                 onChange={set("yearsInBusiness")}
-                placeholder="Years (optional)"
+                placeholder="Years"
+                error={errors.yearsInBusiness}
+                required
               />
             </div>
             <Text
@@ -494,6 +500,8 @@ export function AutoIntakeForm() {
               value={answers.annualSales ?? ""}
               onChange={set("annualSales")}
               placeholder="Rough number is fine"
+              error={errors.annualSales}
+              required
             />
           </>
         )}
@@ -746,6 +754,8 @@ export function AutoIntakeForm() {
                 name="otherLocations"
                 value={answers.otherLocations ?? ""}
                 onChange={set("otherLocations")}
+                error={errors.otherLocations}
+                required
               />
             )}
             <Choice
