@@ -265,6 +265,7 @@ const AUTO_INTAKE_LABELS: [string, string][] = [
   ["entityType", "Business setup"],
   ["contactName", "Contact name"],
   ["phone", "Phone"],
+  ["email", "Email"],
   ["mailingAddress", "Mailing address"],
   ["yearsExperience", "Years of dealer experience"],
   ["yearsInBusiness", "Years in business"],

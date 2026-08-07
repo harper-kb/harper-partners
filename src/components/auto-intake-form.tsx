@@ -35,6 +35,9 @@ const AUTO_FILL = {
 
 const YES_NO = ["Yes", "No"] as const;
 
+// Reasonable email shape check — something@something.tld
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 const STEPS = [
   "Your business",
   "Quick check",
@@ -275,6 +278,9 @@ export function AutoIntakeForm() {
       need("entityType", "Pick one.");
       need("contactName", "Please enter a name.");
       need("phone", "Please enter a phone number.");
+      need("email", "Please enter an email.");
+      if ((answers.email ?? "").trim() && !EMAIL_RE.test(answers.email.trim()))
+        next.email = "Enter a valid email address.";
       need("mailingAddress", "Please enter the mailing address.");
       need("yearsExperience", "Required.");
       need("yearsInBusiness", "Required.");
@@ -470,6 +476,16 @@ export function AutoIntakeForm() {
                 required
               />
             </div>
+            <Text
+              label="Email"
+              name="email"
+              type="email"
+              value={answers.email ?? ""}
+              onChange={set("email")}
+              placeholder="you@yourbusiness.com"
+              error={errors.email}
+              required
+            />
             <Text
               label="Mailing address"
               name="mailingAddress"
