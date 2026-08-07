@@ -2,9 +2,8 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 /**
- * Next.js 16 uses `proxy.ts` (formerly middleware.ts).
- * Clerk runs on all matched routes; Partner Track is protected in route code via auth().
- * /blitz and marketing stay public.
+ * Clerk runs ONLY on Partner Track + auth routes.
+ * Marketing site and /blitz are public (not in this matcher).
  */
 export default clerkMiddleware(async (_auth, request) => {
   const { pathname } = request.nextUrl;
@@ -18,8 +17,15 @@ export default clerkMiddleware(async (_auth, request) => {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/__clerk/:path*",
-    "/(api|trpc)(.*)",
+    "/track",
+    "/track/(.*)",
+    "/sign-in",
+    "/sign-in/(.*)",
+    "/sign-up",
+    "/sign-up/(.*)",
+    "/api/track/(.*)",
+    "/__clerk/(.*)",
+    "/Blitz",
+    "/BLITZ",
   ],
 };
