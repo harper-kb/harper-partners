@@ -23,7 +23,7 @@ export default function AutoAuctionPage() {
               Garage liability, garagekeepers, and lot coverage for dealers who
               buy at auction. Answer the short form below —{" "}
               <b className="font-semibold text-white">
-                you&apos;re automatically entered in the raffle
+                you&apos;re automatically entered in the raffle*
               </b>{" "}
               and a licensed Harper broker calls you with your quote.
             </p>
@@ -38,6 +38,13 @@ export default function AutoAuctionPage() {
             <div className="rounded-[8px] border border-ember-rule bg-white p-6 sm:p-8 shadow-sm">
               <AutoIntakeForm />
             </div>
+            <p className="mt-4 text-[11px] leading-relaxed text-ember-muted text-center">
+              * No purchase or form submission is necessary to enter or win the
+              raffle. You can enter by simply giving us your name and a phone
+              number or email address — that&apos;s only so we can contact you
+              about your winnings. Filling out this form does not affect your
+              odds of winning.
+            </p>
           </div>
         </div>
       </section>
