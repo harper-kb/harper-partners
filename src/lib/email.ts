@@ -257,6 +257,179 @@ function getGmailClient() {
  * this is a no-op and the caller should simply skip sending (the lead is already
  * saved).
  */
+// Question labels for the /auto booth intake, in review order. Keys not listed
+// here still get included (prettified) so nothing is silently dropped.
+const AUTO_INTAKE_LABELS: [string, string][] = [
+  ["businessName", "Business name"],
+  ["dba", "DBA"],
+  ["entityType", "Business setup"],
+  ["contactName", "Contact name"],
+  ["phone", "Phone"],
+  ["mailingAddress", "Mailing address"],
+  ["yearsExperience", "Years of dealer experience"],
+  ["yearsInBusiness", "Years in business"],
+  ["annualSales", "Total dealer sales per year ($)"],
+  ["repossess", "Repossesses vehicles themselves"],
+  ["repossessWilling", "Willing to use third-party repossession"],
+  ["overnightTestDrives", "Allows overnight/extended test drives"],
+  ["overnightWilling", "Willing to stop overnight test drives"],
+  ["autoPawn", "Auto pawn operations"],
+  ["ownerName", "Owner name"],
+  ["ownerDob", "Owner DOB"],
+  ["dlNumber", "Owner DL number"],
+  ["dlState", "Owner DL state"],
+  ["otherOwners", "Other owners"],
+  ["otherOwnerName", "Other owner name"],
+  ["otherOwnerDob", "Other owner DOB"],
+  ["otherOwnerDl", "Other owner DL number"],
+  ["otherOwnerDlState", "Other owner DL state"],
+  ["priorInsurance", "Had prior insurance"],
+  ["priorCarrier", "Prior carrier"],
+  ["priorPremium", "Prior premium ($/yr)"],
+  ["renewalOffered", "Current insurer offering renewal"],
+  ["priorLosses", "Losses or claims"],
+  ["lossDetails", "Loss details"],
+  ["everCanceled", "Policy ever canceled"],
+  ["cancelReason", "Cancellation reason"],
+  ["addressMatch", "Business address same as mailing"],
+  ["businessAddress", "Business / lot address"],
+  ["oneLocation", "Single location"],
+  ["otherLocations", "Where else vehicles are kept"],
+  ["lotSecurity", "Lot security"],
+  ["keysStored", "Key storage"],
+  ["firearms", "Firearms on premises"],
+  ["dealerLicense", "Holds dealer's license"],
+  ["licenseState", "Dealer license state"],
+  ["salesType", "Retail or wholesale"],
+  ["numPlates", "Dealer plates"],
+  ["vehiclesPerYear", "Vehicles sold per year"],
+  ["sightUnseen", "Sells sight-unseen / online"],
+  ["salvageTitles", "Salvage / total-loss titles"],
+  ["financing", "Offers financing"],
+  ["whoTransports", "Transport from auction"],
+  ["thirdPartyCoi", "Transporter carries COI"],
+  ["maxDistance", "Farthest transport (miles)"],
+  ["liabilityOccurrence", "Liability — per occurrence"],
+  ["liabilityOccurrenceCustom", "Liability — custom occurrence ($)"],
+  ["liabilityAggregate", "Liability — aggregate"],
+  ["liabilityAggregateCustom", "Liability — custom aggregate ($)"],
+  ["inventoryCoverage", "Wants inventory coverage"],
+  ["avgCarsOnLot", "Avg. cars on lot"],
+  ["avgCarCost", "Avg. cost per car ($)"],
+  ["mostExpensiveCar", "Most expensive car ($)"],
+  ["testDriveCollision", "Collision coverage on test drives"],
+];
+
+function prettifyKey(key: string): string {
+  return key
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+/** Ordered [label, value] pairs for every answered question. */
+function orderedAnswers(answers: Record<string, string>): [string, string][] {
+  const seen = new Set<string>();
+  const rows: [string, string][] = [];
+  for (const [key, label] of AUTO_INTAKE_LABELS) {
+    seen.add(key);
+    const value = (answers[key] ?? "").trim();
+    if (value) rows.push([label, value]);
+  }
+  for (const [key, value] of Object.entries(answers)) {
+    if (!seen.has(key) && value.trim()) rows.push([prettifyKey(key), value.trim()]);
+  }
+  return rows;
+}
+
+/**
+ * Notify the partnerships inbox that someone submitted the /auto dealer intake.
+ * Best-effort like the partner confirmation: never throws, and a failed send
+ * must not affect the API response (the submission is already saved).
+ */
+export async function sendAutoIntakeNotification(params: {
+  status: string;
+  answers: Record<string, string>;
+  autofill: Record<string, string>;
+}): Promise<{ ok: boolean; skipped?: boolean; error?: string; id?: string }> {
+  if (!isEmailConfigured()) {
+    return { ok: false, skipped: true, error: "Gmail credentials are not set" };
+  }
+
+  const business = params.answers.businessName?.trim() || "Unknown business";
+  const contact = params.answers.contactName?.trim() || "Unknown contact";
+  const phone = params.answers.phone?.trim() || "no phone";
+  const disqualified = params.status === "disqualified";
+
+  const subject = `${disqualified ? "[DISQUALIFIED] " : ""}New auto dealer intake — ${business}`;
+
+  const rows = orderedAnswers(params.answers);
+
+  const text = [
+    `Someone filled in the auto dealer form at partners.harperinsure.com/auto.`,
+    "",
+    `Status: ${disqualified ? "DISQUALIFIED (hit a knockout)" : "Qualified"}`,
+    `Business: ${business}`,
+    `Contact: ${contact} — ${phone}`,
+    "",
+    "Answers:",
+    ...rows.map(([label, value]) => `- ${label}: ${value}`),
+    "",
+    "Auto-filled defaults (not asked at the booth):",
+    ...Object.entries(params.autofill).map(
+      ([key, value]) => `- ${prettifyKey(key)}: ${value}`
+    ),
+    "",
+    "Full record is saved in partnerships.auto_auction_intakes.",
+  ].join("\n");
+
+  const tr = (label: string, value: string) =>
+    `<tr><td style="padding:6px 14px 6px 0;color:#6b7f86;font-size:13px;vertical-align:top;white-space:nowrap;">${escapeHtml(label)}</td><td style="padding:6px 0;color:#1d3a47;font-size:13px;">${escapeHtml(value)}</td></tr>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background-color:#faf6f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #ece3d7;border-radius:12px;padding:28px 32px;">
+      <p style="margin:0 0 4px;font-size:17px;font-weight:600;color:#1d3a47;">New auto dealer intake</p>
+      <p style="margin:0 0 16px;font-size:13px;color:#6b7f86;">Submitted at partners.harperinsure.com/auto</p>
+      <p style="margin:0 0 18px;font-size:14px;color:${disqualified ? "#b3261e" : "#1d3a47"};font-weight:600;">
+        ${disqualified ? "DISQUALIFIED — hit a knockout question" : "Qualified"} · ${escapeHtml(business)} · ${escapeHtml(contact)} · ${escapeHtml(phone)}
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-top:1px solid #ece3d7;">
+        ${rows.map(([label, value]) => tr(label, value)).join("\n        ")}
+      </table>
+      <p style="margin:20px 0 8px;font-size:12px;font-weight:600;color:#6b7f86;text-transform:uppercase;letter-spacing:0.04em;">Auto-filled defaults (not asked at the booth)</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+        ${Object.entries(params.autofill)
+          .map(([key, value]) => tr(prettifyKey(key), value))
+          .join("\n        ")}
+      </table>
+      <p style="margin:20px 0 0;font-size:12px;color:#6b7f86;">Full record is saved in partnerships.auto_auction_intakes.</p>
+    </div>
+  </body>
+</html>`;
+
+  try {
+    const gmail = getGmailClient();
+    const raw = toBase64Url(
+      buildMimeMessage({
+        from: FROM,
+        to: "partnerships@harperinsure.com",
+        replyTo: REPLY_TO,
+        subject,
+        text,
+        html,
+      })
+    );
+    const res = await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw },
+    });
+    return { ok: true, id: res.data.id ?? undefined };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export async function sendPartnerConfirmation(params: {
   toEmail: string;
   name: string;

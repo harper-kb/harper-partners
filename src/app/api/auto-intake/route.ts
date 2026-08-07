@@ -1,4 +1,5 @@
 import { getSql } from "@/lib/db";
+import { isEmailConfigured, sendAutoIntakeNotification } from "@/lib/email";
 
 function str(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -57,6 +58,31 @@ export async function POST(request: Request) {
     return Response.json(
       { error: "Something went wrong saving your details." },
       { status: 500 }
+    );
+  }
+
+  // Best-effort notification to the partnerships inbox. The intake is already
+  // saved, so a failed send must not change the response.
+  if (isEmailConfigured()) {
+    try {
+      const result = await sendAutoIntakeNotification({
+        status,
+        answers: Object.fromEntries(
+          Object.entries(answers).map(([k, v]) => [k, str(v, 500)])
+        ),
+        autofill: Object.fromEntries(
+          Object.entries(autofill).map(([k, v]) => [k, str(v, 500)])
+        ),
+      });
+      if (!result.ok) {
+        console.error("auto intake notification email failed:", result.error);
+      }
+    } catch (err) {
+      console.error("auto intake notification email threw:", err);
+    }
+  } else {
+    console.warn(
+      "Gmail credentials not set — auto intake saved, notification email skipped."
     );
   }
 
