@@ -145,14 +145,10 @@ function ClerkSignInScreen() {
 
         <div className="relative z-10 flex-1 flex flex-col justify-center max-w-[34rem] py-16 lg:py-0">
           <span className="eyebrow eyebrow-light">Harper + Blitz Track</span>
-          <h1 className="display-serif text-white text-[2.25rem] sm:text-[2.75rem] lg:text-[3.25rem] font-normal leading-[1.08] m-0 mb-5">
+          <h1 className="display-serif text-white text-[2.25rem] sm:text-[2.75rem] lg:text-[3.25rem] font-normal leading-[1.08] m-0">
             See where all Blitz leads live{" "}
             <em className="accent-serif">right now.</em>
           </h1>
-          <p className="text-ember-creme/75 text-[0.975rem] leading-relaxed m-0 max-w-[36ch]">
-            Shared team dashboard — every Blitz referral to Harper shows here,
-            from intake to quote to bind. Same view for everyone at Blitz.
-          </p>
         </div>
 
         <p className="relative z-10 text-ember-creme/45 text-xs m-0 hidden lg:block">
@@ -176,8 +172,7 @@ function ClerkSignInScreen() {
               Sign in
             </h2>
             <p className="text-ember-muted text-sm leading-relaxed m-0 mb-7">
-              Use your Blitz work email. Everyone on the team sees the same
-              shared lead dashboard.
+              Use your Blitz work email to continue.
             </p>
             <div className="flex flex-col gap-3">
               <SignInButton mode="modal" forceRedirectUrl="/blitz-track">
