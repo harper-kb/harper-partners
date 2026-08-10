@@ -27,6 +27,7 @@ function str(value: unknown, max: number) {
 
 /**
  * Authenticated Blitz Track referral submit.
+ * All fields optional (Ammar) — soft-validate format only when provided.
  * Same shared partner_blitz table as public /blitz — never Weblead / inquiry SMS.
  */
 export async function POST(request: Request) {
@@ -49,7 +50,38 @@ export async function POST(request: Request) {
   }
 
   const raw = (body ?? {}) as Record<string, unknown>;
-  const classCode = str(raw.classCode, 40) as PartnerClassCode;
+  const classCodeRaw = str(raw.classCode, 40);
+  const classCode = classCodeRaw as PartnerClassCode;
+  const email = str(raw.email, 200).toLowerCase();
+  const zip = str(raw.zip, 10);
+  const revenue = str(raw.revenue, 40);
+
+  // Soft validation: only reject bad formats when a value was entered.
+  if (email && !EMAIL_RE.test(email)) {
+    return NextResponse.json(
+      { ok: false, message: "That email doesn’t look valid — fix it or leave it blank." },
+      { status: 400 },
+    );
+  }
+  if (zip && !ZIP_RE.test(zip)) {
+    return NextResponse.json(
+      { ok: false, message: "ZIP should be 5 digits (or leave blank)." },
+      { status: 400 },
+    );
+  }
+  if (classCodeRaw && !ALLOWED_CLASSES.has(classCodeRaw)) {
+    return NextResponse.json(
+      { ok: false, message: "Select a class type from the list, or leave blank." },
+      { status: 400 },
+    );
+  }
+  if (revenue && !ALLOWED_REVENUE.has(revenue)) {
+    return NextResponse.json(
+      { ok: false, message: "Select revenue from the list, or leave blank." },
+      { status: 400 },
+    );
+  }
+
   const payload: PartnerReferralPayload = {
     partnerId: BLITZ_TRACK.id,
     partnerName: BLITZ_TRACK.name,
@@ -57,45 +89,38 @@ export async function POST(request: Request) {
     contactName: str(raw.contactName, 120),
     businessName: str(raw.businessName, 160),
     phone: str(raw.phone, 40),
-    email: str(raw.email, 200).toLowerCase(),
+    email,
     street: str(raw.street, 200),
     city: str(raw.city, 100),
     state: str(raw.state, 2).toUpperCase(),
-    zip: str(raw.zip, 10),
-    revenue: str(raw.revenue, 40),
+    zip,
+    revenue,
     classCode,
     classCodeOther: str(raw.classCodeOther, 120) || undefined,
     notes: str(raw.notes, 2000) || undefined,
     submittedAt: new Date().toISOString(),
   };
 
-  if (!payload.contactName || !payload.businessName) {
+  const hasAnyField = Boolean(
+    payload.contactName ||
+      payload.businessName ||
+      payload.phone ||
+      payload.email ||
+      payload.street ||
+      payload.city ||
+      payload.state ||
+      payload.zip ||
+      payload.revenue ||
+      classCodeRaw ||
+      payload.classCodeOther ||
+      payload.notes,
+  );
+  if (!hasAnyField) {
     return NextResponse.json(
-      { ok: false, message: "Contact name and business name are required." },
-      { status: 400 },
-    );
-  }
-  if (!payload.phone || !EMAIL_RE.test(payload.email)) {
-    return NextResponse.json(
-      { ok: false, message: "Valid customer phone and email are required." },
-      { status: 400 },
-    );
-  }
-  if (!payload.street || !payload.city || !payload.state || !ZIP_RE.test(payload.zip)) {
-    return NextResponse.json(
-      { ok: false, message: "Complete business address, city, state, and ZIP." },
-      { status: 400 },
-    );
-  }
-  if (!ALLOWED_CLASSES.has(payload.classCode) || !ALLOWED_REVENUE.has(payload.revenue)) {
-    return NextResponse.json(
-      { ok: false, message: "Select class type and annual revenue." },
-      { status: 400 },
-    );
-  }
-  if (payload.classCode === "other" && !payload.classCodeOther) {
-    return NextResponse.json(
-      { ok: false, message: "Please describe the class type for Other." },
+      {
+        ok: false,
+        message: "Add at least one detail about the lead before sending.",
+      },
       { status: 400 },
     );
   }
@@ -117,16 +142,17 @@ export async function POST(request: Request) {
     const agency = getAgencyById("blitz");
     if (agency) {
       try {
+        const label = classLabel(payload) || "Commercial";
         await registerPartnerReferral({
           agency,
-          businessName: payload.businessName,
-          contactName: payload.contactName,
-          contactEmail: payload.email,
-          classLabel: classLabel(payload),
+          businessName: payload.businessName || "Unnamed business",
+          contactName: payload.contactName || "Unknown contact",
+          contactEmail: payload.email || session.email,
+          classLabel: label,
           notes:
             payload.notes ||
             `Submitted via Blitz Track /blitz-refer by ${session.email}.`,
-          phone: payload.phone,
+          phone: payload.phone || undefined,
         });
       } catch (regErr) {
         console.error("blitz-track refer registry write failed:", regErr);

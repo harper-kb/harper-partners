@@ -19,7 +19,7 @@ export async function saveBlitzReferralForm(
 ): Promise<{ id: string }> {
   const sql = getSql();
   const { payload, pageUrl, userAgent, source = "blitz_public_refer" } = input;
-  const label = classLabel(payload);
+  const label = classLabel(payload) || "Unspecified";
   const ingestError =
     source === "blitz_track_refer"
       ? "Blitz track portal — skipped Weblead ingest and inquiry SMS by design."
