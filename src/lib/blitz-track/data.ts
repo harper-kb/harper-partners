@@ -34,6 +34,7 @@ type BlitzFormRow = {
   status: string;
   ingest_status: string;
   notes: string | null;
+  appetite: string | null;
   created_at: string;
 };
 
@@ -198,6 +199,7 @@ export async function getBlitzTrackLeads(): Promise<{
           status,
           ingest_status,
           notes,
+          appetite,
           created_at::text as created_at
         from partnerships.partner_blitz
         order by created_at desc
@@ -285,7 +287,11 @@ export async function getBlitzTrackLeads(): Promise<{
       if (seenBusiness.has(key)) continue;
       seenBusiness.add(key);
       const stage = mapFormStatus(row.status, row.ingest_status);
-      const appetite = parseAppetiteFromNotes(row.notes);
+      const appetiteCol =
+        row.appetite === "inside" || row.appetite === "outside"
+          ? row.appetite
+          : null;
+      const appetite = appetiteCol || parseAppetiteFromNotes(row.notes);
       const appetiteBit = appetiteLabel(appetite);
       const noteBody = stripAppetiteTag(row.notes);
       leads.push({

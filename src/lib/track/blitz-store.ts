@@ -31,7 +31,13 @@ export async function saveBlitzReferralForm(
       ? "Blitz track portal — skipped Weblead ingest and inquiry SMS by design."
       : "Blitz public form — skipped Weblead ingest and inquiry SMS by design.";
 
-  let notes = withAppetiteNotes(payload.notes, input.appetite);
+  const appetite =
+    input.appetite === "inside" || input.appetite === "outside"
+      ? input.appetite
+      : null;
+
+  // Keep a readable notes tag as a backup; primary store is appetite column.
+  let notes = withAppetiteNotes(payload.notes, appetite);
   if (input.submitterEmail) {
     notes = notes
       ? `${notes}\n\nSubmitted by ${input.submitterEmail}`
@@ -53,6 +59,7 @@ export async function saveBlitzReferralForm(
       class_code_other,
       class_label,
       notes,
+      appetite,
       status,
       ingest_status,
       ingest_error,
@@ -73,6 +80,7 @@ export async function saveBlitzReferralForm(
       ${payload.classCodeOther ?? null},
       ${label},
       ${notes},
+      ${appetite},
       ${"new"},
       ${"deferred"},
       ${ingestError},
