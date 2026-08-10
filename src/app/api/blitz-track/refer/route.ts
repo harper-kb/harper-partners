@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { getBlitzTrackSession } from "@/lib/blitz-track/auth";
+import {
+  appetiteLabel,
+  type BlitzAppetite,
+} from "@/lib/blitz-track/appetite";
 import { BLITZ_TRACK } from "@/lib/blitz-track/data";
 import {
   PARTNER_CLASS_OPTIONS,
@@ -20,6 +24,7 @@ const ALLOWED_CLASSES = new Set(
 const ALLOWED_REVENUE = new Set(
   PARTNER_REVENUE_OPTIONS.map((o) => o.value).filter(Boolean),
 );
+const ALLOWED_APPETITE = new Set(["inside", "outside"]);
 
 function str(value: unknown, max: number) {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -55,11 +60,18 @@ export async function POST(request: Request) {
   const email = str(raw.email, 200).toLowerCase();
   const zip = str(raw.zip, 10);
   const revenue = str(raw.revenue, 40);
+  const appetiteRaw = str(raw.appetite, 20).toLowerCase();
+  const appetite = (
+    appetiteRaw === "inside" || appetiteRaw === "outside" ? appetiteRaw : ""
+  ) as BlitzAppetite | "";
 
   // Soft validation: only reject bad formats when a value was entered.
   if (email && !EMAIL_RE.test(email)) {
     return NextResponse.json(
-      { ok: false, message: "That email doesn’t look valid — fix it or leave it blank." },
+      {
+        ok: false,
+        message: "That email doesn’t look valid — fix it or leave it blank.",
+      },
       { status: 400 },
     );
   }
@@ -71,13 +83,25 @@ export async function POST(request: Request) {
   }
   if (classCodeRaw && !ALLOWED_CLASSES.has(classCodeRaw as PartnerClassCode)) {
     return NextResponse.json(
-      { ok: false, message: "Select a class type from the list, or leave blank." },
+      {
+        ok: false,
+        message: "Select a class type from the list, or leave blank.",
+      },
       { status: 400 },
     );
   }
   if (revenue && !ALLOWED_REVENUE.has(revenue)) {
     return NextResponse.json(
       { ok: false, message: "Select revenue from the list, or leave blank." },
+      { status: 400 },
+    );
+  }
+  if (appetiteRaw && !ALLOWED_APPETITE.has(appetiteRaw)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Pick inside or outside Blitz appetite, or leave blank.",
+      },
       { status: 400 },
     );
   }
@@ -113,7 +137,8 @@ export async function POST(request: Request) {
       payload.revenue ||
       classCodeRaw ||
       payload.classCodeOther ||
-      payload.notes,
+      payload.notes ||
+      appetite,
   );
   if (!hasAnyField) {
     return NextResponse.json(
@@ -137,21 +162,24 @@ export async function POST(request: Request) {
       userAgent,
       source: "blitz_track_refer",
       submitterEmail: session.email,
+      appetite,
     });
 
     const agency = getAgencyById("blitz");
     if (agency) {
       try {
         const label = classLabel(payload) || "Commercial";
+        const appetiteBit = appetiteLabel(appetite);
+        const baseNotes =
+          payload.notes ||
+          `Submitted via Blitz Track /blitz-refer by ${session.email}.`;
         await registerPartnerReferral({
           agency,
           businessName: payload.businessName || "Unnamed business",
           contactName: payload.contactName || "Unknown contact",
           contactEmail: payload.email || session.email,
           classLabel: label,
-          notes:
-            payload.notes ||
-            `Submitted via Blitz Track /blitz-refer by ${session.email}.`,
+          notes: appetiteBit ? `${appetiteBit}. ${baseNotes}` : baseNotes,
           phone: payload.phone || undefined,
         });
       } catch (regErr) {

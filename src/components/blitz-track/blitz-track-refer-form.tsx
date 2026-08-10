@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { BLITZ_APPETITE_OPTIONS } from "@/lib/blitz-track/appetite";
 import {
   PARTNER_CLASS_OPTIONS,
   PARTNER_REVENUE_OPTIONS,
@@ -23,6 +24,7 @@ export function BlitzTrackReferForm() {
   const { isLoaded, isSignedIn } = useAuth();
   const [gate, setGate] = useState<Gate>({ status: "loading" });
   const [classCode, setClassCode] = useState("");
+  const [appetite, setAppetite] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<{
     ok: boolean;
@@ -76,6 +78,7 @@ export function BlitzTrackReferForm() {
 
     const data = new FormData(form);
     const payload = {
+      appetite: String(data.get("appetite") || "").trim(),
       contactName: String(data.get("contactName") || "").trim(),
       businessName: String(data.get("businessName") || "").trim(),
       phone: String(data.get("phone") || "").trim(),
@@ -117,6 +120,7 @@ export function BlitzTrackReferForm() {
       if (result.ok) {
         form.reset();
         setClassCode("");
+        setAppetite("");
       }
     } catch {
       setStatus({
@@ -204,10 +208,10 @@ export function BlitzTrackReferForm() {
               </p>
               <ul className="list-none m-0 p-0 grid gap-3">
                 {[
-                  "Use this form for risks outside Blitz appetite",
+                  "Mark whether the lead is inside or outside Blitz appetite",
+                  "Outside appetite → Harper places; inside → can go back to Blitz",
                   "Phone + email help intake reach them — add if you have them",
-                  "Class type and revenue are helpful but not required",
-                  "Notes alone are enough if that’s all you have right now",
+                  "Everything else is optional — send whatever you have",
                 ].map((item) => (
                   <li
                     key={item}
@@ -249,6 +253,48 @@ export function BlitzTrackReferForm() {
               ) : null}
 
               <form onSubmit={onSubmit} className="space-y-3" noValidate>
+                <fieldset className="m-0 p-0 border-0">
+                  <legend className="block text-ember-blue text-xs font-medium mb-2">
+                    Is this lead inside or outside Blitz appetite?
+                  </legend>
+                  <div className="grid gap-2">
+                    {BLITZ_APPETITE_OPTIONS.filter((o) => o.value).map((o) => {
+                      const selected = appetite === o.value;
+                      return (
+                        <label
+                          key={o.value}
+                          className={`flex items-start gap-3 rounded-md border px-3.5 py-3 cursor-pointer transition-colors ${
+                            selected
+                              ? "border-ember-blue bg-[#eef4f7]"
+                              : "border-ember-rule bg-white hover:border-ember-blue/35"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="appetite"
+                            value={o.value}
+                            checked={selected}
+                            onChange={() => setAppetite(o.value)}
+                            className="mt-1 accent-[var(--color-ember-blue)]"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-ember-blue">
+                              {o.label}
+                            </span>
+                            <span className="block text-xs text-ember-muted mt-0.5 leading-snug">
+                              {o.hint}
+                            </span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-ember-muted m-0 mt-2 leading-snug">
+                    Optional — if unsure, leave blank or pick Outside (Harper
+                    places).
+                  </p>
+                </fieldset>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field label="Customer contact name" htmlFor="contact-name">
                     <input

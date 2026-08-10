@@ -1,3 +1,8 @@
+import {
+  appetiteLabel,
+  parseAppetiteFromNotes,
+  stripAppetiteTag,
+} from "@/lib/blitz-track/appetite";
 import { getSql } from "@/lib/db";
 import {
   fetchCompaniesByIds,
@@ -280,19 +285,29 @@ export async function getBlitzTrackLeads(): Promise<{
       if (seenBusiness.has(key)) continue;
       seenBusiness.add(key);
       const stage = mapFormStatus(row.status, row.ingest_status);
+      const appetite = parseAppetiteFromNotes(row.notes);
+      const appetiteBit = appetiteLabel(appetite);
+      const noteBody = stripAppetiteTag(row.notes);
       leads.push({
         id: `BZ-${row.id.slice(0, 8)}`,
-        business: row.business_name,
+        business: row.business_name || "Unnamed business",
         classLabel: row.class_label || "Commercial",
         state: row.state || "—",
         revenue: formatRevenueCode(row.revenue),
         received: formatReceived(row.created_at),
         owner: `${stageOwner(stage)} · Harper intake`,
         statusDetail: (
-          row.notes ||
-          (row.ingest_status === "deferred"
-            ? "Saved from Blitz form — Harper will chase"
-            : `Status: ${row.status}`)
+          [
+            appetiteBit,
+            noteBody,
+            !appetiteBit && !noteBody
+              ? row.ingest_status === "deferred"
+                ? "Saved from Blitz form — Harper will chase"
+                : `Status: ${row.status}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
         ).slice(0, 280),
         premium: null,
         stage,

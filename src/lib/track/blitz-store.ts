@@ -3,6 +3,10 @@ import {
   classLabel,
   type PartnerReferralPayload,
 } from "@/lib/track/referral";
+import {
+  withAppetiteNotes,
+  type BlitzAppetite,
+} from "@/lib/blitz-track/appetite";
 
 export type SaveBlitzReferralInput = {
   payload: PartnerReferralPayload;
@@ -11,6 +15,8 @@ export type SaveBlitzReferralInput = {
   /** Default: public /blitz. Portal /blitz-refer uses blitz_track_refer. */
   source?: "blitz_public_refer" | "blitz_track_refer";
   submitterEmail?: string | null;
+  /** Inside vs outside Blitz underwriting appetite. */
+  appetite?: BlitzAppetite | "" | null;
 };
 
 /** Persist a Blitz form submit to partnerships.partner_blitz. */
@@ -24,12 +30,13 @@ export async function saveBlitzReferralForm(
     source === "blitz_track_refer"
       ? "Blitz track portal — skipped Weblead ingest and inquiry SMS by design."
       : "Blitz public form — skipped Weblead ingest and inquiry SMS by design.";
-  const notes =
-    input.submitterEmail && !payload.notes
-      ? `Submitted by ${input.submitterEmail}`
-      : input.submitterEmail && payload.notes
-        ? `${payload.notes}\n\nSubmitted by ${input.submitterEmail}`
-        : payload.notes ?? null;
+
+  let notes = withAppetiteNotes(payload.notes, input.appetite);
+  if (input.submitterEmail) {
+    notes = notes
+      ? `${notes}\n\nSubmitted by ${input.submitterEmail}`
+      : `Submitted by ${input.submitterEmail}`;
+  }
 
   const rows = await sql<{ id: string }[]>`
     insert into partnerships.partner_blitz (
