@@ -308,16 +308,10 @@ function Dashboard({
       <section className="hero-prestige">
         <div className="relative z-10 max-w-container mx-auto px-4 sm:px-8 lg:px-16 pt-10 pb-9 lg:pt-12 lg:pb-11">
           <span className="eyebrow eyebrow-light">Harper + Blitz</span>
-          <h1 className="display-serif text-white text-[2rem] sm:text-[2.5rem] lg:text-[3rem] font-normal leading-[1.08] m-0 mb-4 max-w-[18ch]">
+          <h1 className="display-serif text-white text-[2rem] sm:text-[2.5rem] lg:text-[3rem] font-normal leading-[1.08] m-0 mb-8 max-w-[18ch]">
             See where all Blitz leads live{" "}
             <em className="accent-serif">right now.</em>
           </h1>
-          <p className="text-ember-creme/75 text-[0.95rem] leading-relaxed m-0 mb-8 max-w-[46ch]">
-            Shared team view — every risk Blitz sends to Harper through{" "}
-            <span className="text-ember-creme">{agency.referralInbox}</span>{" "}
-            or the referral form lands here. Same dashboard for the whole Blitz
-            team.
-          </p>
 
           <div className="mb-8">
             <Link
@@ -492,22 +486,7 @@ function Dashboard({
           </table>
         </div>
 
-        <div className="border-t border-ember-blue/20 pt-8 pb-12">
-          <span className="eyebrow text-ember-salmon mb-3">How this works</span>
-          <h3 className="display-serif text-ember-blue text-[1.5rem] font-normal m-0 mb-2">
-            One Blitz board for the whole team
-          </h3>
-          <p className="text-ember-muted text-sm leading-relaxed m-0 max-w-3xl">
-            Unlike agency Partner Track (scoped per partner email), Blitz Track
-            is shared. Submits from{" "}
-            <code className="text-ember-blue/80">/blitz</code> and{" "}
-            <code className="text-ember-blue/80">/blitz-refer</code> all land
-            here so Landon and the team see the same pipeline.
-          </p>
-          <p className="text-[11px] text-ember-muted/70 m-0 mt-6">
-            partners.harperinsure.com/blitz-track · Clerk sign-in · Shared view
-          </p>
-        </div>
+        <div className="pb-12" />
       </section>
     </div>
   );
