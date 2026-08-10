@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  if (classCodeRaw && !ALLOWED_CLASSES.has(classCodeRaw)) {
+  if (classCodeRaw && !ALLOWED_CLASSES.has(classCodeRaw as PartnerClassCode)) {
     return NextResponse.json(
       { ok: false, message: "Select a class type from the list, or leave blank." },
       { status: 400 },
