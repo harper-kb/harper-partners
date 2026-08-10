@@ -2,7 +2,7 @@
 
 import { ClerkProvider } from "@clerk/nextjs";
 
-/** Clerk only wraps Partner Track + sign-in/up — not the public marketing site or /blitz. */
+/** Clerk wraps Partner Track, Blitz Track, Harper Tracking + sign-in/up — not marketing or public /blitz. */
 export function AppClerkProvider({
   children,
 }: {
