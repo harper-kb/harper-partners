@@ -286,8 +286,8 @@ export const STAGE_META: Record<
   { label: string; title: string; blurb: string }
 > = {
   ingested: {
-    label: "Ingested",
-    title: "Lead ingested · awaiting customer response",
+    label: "Awaiting customer response",
+    title: "Awaiting customer response",
     blurb:
       "Harper has the referral and intake is chasing. Call, text, and email until we get the customer on the phone.",
   },
