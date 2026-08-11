@@ -306,6 +306,14 @@ export function AutoIntakeForm() {
         need("otherOwnerDl", "Required — carriers pull MVRs.");
         need("otherOwnerDlState", "Required.");
       }
+      need("ownerPersonalAuto", "Please answer.");
+      need("driverViolations", "Please answer.");
+      if (answers.driverViolations === "Yes")
+        need("violationDetails", "A quick summary is fine.");
+      need("allLicensed2Years", "Please answer.");
+      need("otherDrivers", "Please answer.");
+      if (answers.otherDrivers === "Yes")
+        need("otherDriversList", "Name, DOB, license # and state for each.");
       need("priorInsurance", "Please answer.");
       if (answers.priorInsurance === "Yes") {
         need("priorCarrier", "Who was the carrier?");
@@ -679,6 +687,55 @@ export function AutoIntakeForm() {
                   the follow-up call.
                 </p>
               </>
+            )}
+            <YesNo
+              label="Do the owner(s) have a personal auto insurance policy?"
+              value={answers.ownerPersonalAuto ?? ""}
+              onChange={set("ownerPersonalAuto")}
+              error={errors.ownerPersonalAuto}
+              required
+            />
+            <YesNo
+              label="Any tickets, accidents, or violations for any driver in the past 3 years?"
+              value={answers.driverViolations ?? ""}
+              onChange={set("driverViolations")}
+              error={errors.driverViolations}
+              required
+            />
+            {answers.driverViolations === "Yes" && (
+              <Text
+                label="Quick summary (who, what, roughly when)"
+                name="violationDetails"
+                value={answers.violationDetails ?? ""}
+                onChange={set("violationDetails")}
+                error={errors.violationDetails}
+                required
+              />
+            )}
+            <YesNo
+              label="Have all drivers had a valid U.S. driver's license for at least 2 years?"
+              value={answers.allLicensed2Years ?? ""}
+              onChange={set("allLicensed2Years")}
+              error={errors.allLicensed2Years}
+              required
+            />
+            <YesNo
+              label="Besides the owner(s), does anyone else work at or drive for the business? (employees, household members, 1099 contractors)"
+              value={answers.otherDrivers ?? ""}
+              onChange={set("otherDrivers")}
+              error={errors.otherDrivers}
+              required
+            />
+            {answers.otherDrivers === "Yes" && (
+              <Text
+                label="List each person: name, date of birth, license # and state"
+                name="otherDriversList"
+                value={answers.otherDriversList ?? ""}
+                onChange={set("otherDriversList")}
+                placeholder="e.g. Maria Lopez, 04/12/1990, CA D7654321"
+                error={errors.otherDriversList}
+                required
+              />
             )}
             <YesNo
               label="Have you had insurance for this business before?"
