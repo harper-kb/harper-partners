@@ -16,6 +16,13 @@ const GOOGLE_REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN || "";
 const USER_GOOGLE_EMAIL =
   process.env.USER_GOOGLE_EMAIL || "partnerships@harperinsure.com";
 
+// Optional separate identity for /auto intake notifications. When a token for
+// a second account is provided, notifications are sent from that account (via
+// its send-as alias) so they don't show up as "me" in the partnerships inbox.
+const INTAKE_GOOGLE_REFRESH_TOKEN =
+  process.env.INTAKE_GOOGLE_REFRESH_TOKEN || "";
+const INTAKE_FROM_EMAIL = process.env.INTAKE_FROM_EMAIL || "";
+
 // The visible From header. Uses the authenticated mailbox with a friendly name.
 const FROM = `Harper Partners <${USER_GOOGLE_EMAIL}>`;
 
@@ -229,11 +236,11 @@ function buildMimeMessage(params: {
  * clear error if any required environment variable is missing so failures are
  * easy to diagnose in server logs.
  */
-function getGmailClient() {
+function getGmailClient(refreshToken: string = GOOGLE_REFRESH_TOKEN) {
   const missing: string[] = [];
   if (!GOOGLE_OAUTH_CLIENT_ID) missing.push("GOOGLE_OAUTH_CLIENT_ID");
   if (!GOOGLE_OAUTH_CLIENT_SECRET) missing.push("GOOGLE_OAUTH_CLIENT_SECRET");
-  if (!GOOGLE_REFRESH_TOKEN) missing.push("GOOGLE_REFRESH_TOKEN");
+  if (!refreshToken) missing.push("GOOGLE_REFRESH_TOKEN");
   if (missing.length > 0) {
     throw new Error(
       `Gmail sending is not configured — missing env var(s): ${missing.join(
@@ -246,7 +253,7 @@ function getGmailClient() {
     GOOGLE_OAUTH_CLIENT_ID,
     GOOGLE_OAUTH_CLIENT_SECRET
   );
-  oauth2Client.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
 
   return google.gmail({ version: "v1", auth: oauth2Client });
 }
@@ -410,13 +417,21 @@ export async function sendAutoIntakeNotification(params: {
   </body>
 </html>`;
 
+  // Prefer the dedicated intake identity (a different Google account sending
+  // via its alias) so the partnerships inbox doesn't render the sender as
+  // "me". Fall back to the partnerships mailbox if it isn't configured.
+  const useIntakeIdentity = Boolean(
+    INTAKE_GOOGLE_REFRESH_TOKEN && INTAKE_FROM_EMAIL
+  );
+  const fromAddress = useIntakeIdentity ? INTAKE_FROM_EMAIL : USER_GOOGLE_EMAIL;
+
   try {
-    const gmail = getGmailClient();
+    const gmail = getGmailClient(
+      useIntakeIdentity ? INTAKE_GOOGLE_REFRESH_TOKEN : GOOGLE_REFRESH_TOKEN
+    );
     const raw = toBase64Url(
       buildMimeMessage({
-        // Distinct display name so the inbox row doesn't just read "me" /
-        // "Harper Partners" — these are internal lead notifications.
-        from: `AUTO DEALER INTAKE <${USER_GOOGLE_EMAIL}>`,
+        from: `AUTO DEALER INTAKE <${fromAddress}>`,
         to: "partnerships@harperinsure.com",
         replyTo: REPLY_TO,
         subject,
