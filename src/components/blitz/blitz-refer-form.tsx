@@ -188,7 +188,7 @@ export function BlitzReferForm() {
 
               <form onSubmit={onSubmit} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="First name" htmlFor="first-name">
+                  <Field label="First name" htmlFor="first-name" required>
                     <input
                       id="first-name"
                       name="firstName"
@@ -198,7 +198,7 @@ export function BlitzReferForm() {
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="Last name" htmlFor="last-name">
+                  <Field label="Last name" htmlFor="last-name" required>
                     <input
                       id="last-name"
                       name="lastName"
@@ -211,7 +211,7 @@ export function BlitzReferForm() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Phone" htmlFor="phone">
+                  <Field label="Phone" htmlFor="phone" required>
                     <input
                       id="phone"
                       name="phone"
@@ -222,7 +222,7 @@ export function BlitzReferForm() {
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="Email" htmlFor="email">
+                  <Field label="Email" htmlFor="email" required>
                     <input
                       id="email"
                       name="email"
@@ -403,10 +403,12 @@ export function BlitzReferForm() {
 function Field({
   label,
   htmlFor,
+  required = false,
   children,
 }: {
   label: string;
   htmlFor: string;
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -416,6 +418,12 @@ function Field({
         className="block text-ember-blue text-xs font-medium mb-1"
       >
         {label}
+        {required ? (
+          <span className="text-ember-salmon ml-0.5" aria-hidden>
+            *
+          </span>
+        ) : null}
+        {required ? <span className="sr-only"> (required)</span> : null}
       </label>
       {children}
     </div>
