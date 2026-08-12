@@ -270,6 +270,7 @@ const AUTO_INTAKE_LABELS: [string, string][] = [
   ["businessName", "Business name"],
   ["dba", "DBA"],
   ["entityType", "Business setup"],
+  ["corpType", "S corp or C corp"],
   ["contactName", "Contact name"],
   ["phone", "Phone"],
   ["email", "Email"],

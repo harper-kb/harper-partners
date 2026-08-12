@@ -276,6 +276,8 @@ export function AutoIntakeForm() {
     if (current === 0) {
       need("businessName", "Please enter the business name.");
       need("entityType", "Pick one.");
+      if (answers.entityType === "Corporation")
+        need("corpType", "Pick one — 'Not sure' is fine.");
       need("contactName", "Please enter a name.");
       need("phone", "Please enter a phone number.");
       need("email", "Please enter an email.");
@@ -456,12 +458,27 @@ export function AutoIntakeForm() {
             />
             <Choice
               label="How is the business set up?"
-              options={["LLC", "Individual / sole proprietor", "Corporation"]}
+              options={[
+                "LLC",
+                "Individual / sole proprietor",
+                "Partnership",
+                "Corporation",
+              ]}
               value={answers.entityType ?? ""}
               onChange={set("entityType")}
               error={errors.entityType}
               required
             />
+            {answers.entityType === "Corporation" && (
+              <Choice
+                label="Is it an S corp or a C corp?"
+                options={["S corp", "C corp", "Not sure"]}
+                value={answers.corpType ?? ""}
+                onChange={set("corpType")}
+                error={errors.corpType}
+                required
+              />
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Text
                 label="Your name"
