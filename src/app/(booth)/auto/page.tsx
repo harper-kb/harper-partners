@@ -35,7 +35,10 @@ export default function AutoAuctionPage() {
       <section className="w-full bg-ember-beige-02 border-b border-ember-rule">
         <div className="w-full max-w-container mx-auto px-4 sm:px-8 lg:px-16 py-10 md:py-14">
           <div className="max-w-[640px] mx-auto">
-            <div className="rounded-[8px] border border-ember-rule bg-white p-6 sm:p-8 shadow-sm">
+            <div
+              id="quote-form"
+              className="scroll-mt-24 rounded-[8px] border border-ember-rule bg-white p-6 sm:p-8 shadow-sm"
+            >
               <AutoIntakeForm />
             </div>
             <p className="mt-4 text-[11px] leading-relaxed text-ember-muted text-center">

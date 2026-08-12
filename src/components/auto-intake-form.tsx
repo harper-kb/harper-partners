@@ -230,6 +230,85 @@ function Select({
   );
 }
 
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+] as const;
+
+// Years listed newest-first from 2005 (youngest owner a carrier will quote)
+// so nobody scrolls through two decades to find their birth year.
+const DOB_YEARS: number[] = [];
+for (let y = 2005; y >= 1920; y--) DOB_YEARS.push(y);
+
+function DobSelect({
+  label,
+  value,
+  onChange,
+  error,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+  required?: boolean;
+}) {
+  const [parts, setParts] = useState(() => {
+    const [y = "", m = "", d = ""] = (value || "").split("-");
+    return { y, m: m.replace(/^0/, ""), d: d.replace(/^0/, "") };
+  });
+
+  const setPart = (key: "y" | "m" | "d") => (v: string) => {
+    const next = { ...parts, [key]: v };
+    if (next.y && next.m && next.d) {
+      const maxDay = new Date(Number(next.y), Number(next.m), 0).getDate();
+      if (Number(next.d) > maxDay) next.d = String(maxDay);
+    }
+    setParts(next);
+    onChange(
+      next.y && next.m && next.d
+        ? `${next.y}-${next.m.padStart(2, "0")}-${next.d.padStart(2, "0")}`
+        : ""
+    );
+  };
+
+  const dayCount =
+    parts.y && parts.m
+      ? new Date(Number(parts.y), Number(parts.m), 0).getDate()
+      : 31;
+
+  const selectCls = "form-input-light text-sm";
+  return (
+    <div>
+      <span className="form-label-light mb-1.5 block">
+        {label}
+        {required && <RequiredMark />}
+      </span>
+      <div className="grid grid-cols-[1.3fr_0.8fr_1fr] gap-2">
+        <select value={parts.m} onChange={(e) => setPart("m")(e.target.value)} className={selectCls} aria-label="Month">
+          <option value="" disabled>Month</option>
+          {MONTHS.map((name, i) => (
+            <option key={name} value={String(i + 1)}>{name}</option>
+          ))}
+        </select>
+        <select value={parts.d} onChange={(e) => setPart("d")(e.target.value)} className={selectCls} aria-label="Day">
+          <option value="" disabled>Day</option>
+          {Array.from({ length: dayCount }, (_, i) => (
+            <option key={i + 1} value={String(i + 1)}>{i + 1}</option>
+          ))}
+        </select>
+        <select value={parts.y} onChange={(e) => setPart("y")(e.target.value)} className={selectCls} aria-label="Year">
+          <option value="" disabled>Year</option>
+          {DOB_YEARS.map((y) => (
+            <option key={y} value={String(y)}>{y}</option>
+          ))}
+        </select>
+      </div>
+      {error && <p className="mt-1 text-[0.75rem] text-ember-salmon-800 m-0">{error}</p>}
+    </div>
+  );
+}
+
 const LIABILITY_OPTIONS = [
   "$100,000 (most popular)",
   "$200,000",
@@ -520,7 +599,7 @@ export function AutoIntakeForm() {
               error={errors.mailingAddress}
               required
             />
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
               <Text
                 label="Years of dealer experience"
                 name="yearsExperience"
@@ -619,12 +698,8 @@ export function AutoIntakeForm() {
                 error={errors.ownerName}
                 required
               />
-              <Text
+              <DobSelect
                 label="Owner's date of birth"
-                name="ownerDob"
-                type="date"
-                min="1920-01-01"
-                max="2005-12-31"
                 value={answers.ownerDob ?? ""}
                 onChange={set("ownerDob")}
                 error={errors.ownerDob}
@@ -668,12 +743,8 @@ export function AutoIntakeForm() {
                     error={errors.otherOwnerName}
                     required
                   />
-                  <Text
+                  <DobSelect
                     label="Other owner's date of birth"
-                    name="otherOwnerDob"
-                    type="date"
-                    min="1920-01-01"
-                    max="2005-12-31"
                     value={answers.otherOwnerDob ?? ""}
                     onChange={set("otherOwnerDob")}
                     error={errors.otherOwnerDob}
