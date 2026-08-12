@@ -10,12 +10,12 @@ export const BLITZ_APPETITE_OPTIONS: {
   {
     value: "outside",
     label: "Outside Blitz appetite",
-    hint: "Harper places / binds (tattoo, vape, cannabis, liquor, contractor, etc.)",
+    hint: "Harper places / binds — still send these here",
   },
   {
     value: "inside",
     label: "Inside Blitz appetite",
-    hint: "Fits Blitz — Harper helps quote; lead can go back to Blitz",
+    hint: "Fits Blitz — Harper can help quote; lead can go back to Blitz",
   },
 ];
 

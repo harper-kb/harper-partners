@@ -12,7 +12,10 @@ import { US_STATES } from "@/lib/track/us-states";
 /**
  * Public Blitz → Harper referral form.
  * No login, no Partner Track dashboard — form fill only.
- * Saves to partnerships.partner_referrals; never hits Weblead / inquiry SMS.
+ * Saves to partnerships.partner_blitz; never hits Weblead / inquiry SMS.
+ *
+ * Required (Kristina / Ammar): first name, last name, phone, email.
+ * Everything else optional.
  */
 export function BlitzReferForm() {
   const [classCode, setClassCode] = useState("");
@@ -28,14 +31,19 @@ export function BlitzReferForm() {
     if (!form.reportValidity()) {
       setStatus({
         ok: false,
-        message: "Please complete all required fields with valid values.",
+        message:
+          "First name, last name, phone, and email are required — please complete those.",
       });
       return;
     }
 
     const data = new FormData(form);
+    const firstName = String(data.get("firstName") || "").trim();
+    const lastName = String(data.get("lastName") || "").trim();
     const payload = {
-      contactName: String(data.get("contactName") || "").trim(),
+      firstName,
+      lastName,
+      contactName: [firstName, lastName].filter(Boolean).join(" "),
       businessName: String(data.get("businessName") || "").trim(),
       phone: String(data.get("phone") || "").trim(),
       email: String(data.get("email") || "").trim(),
@@ -52,7 +60,7 @@ export function BlitzReferForm() {
     if (payload.classCode === "other" && !payload.classCodeOther) {
       setStatus({
         ok: false,
-        message: "Please describe the class type for Other.",
+        message: "Please describe the class type for Other, or clear Class.",
       });
       return;
     }
@@ -112,9 +120,9 @@ export function BlitzReferForm() {
             Refer a lead. <em className="accent-serif">We will chase it.</em>
           </h1>
           <p className="text-ember-creme/80 text-[1.05rem] leading-relaxed m-0 max-w-[48ch]">
-            Fill this out when a commercial risk is outside Blitz appetite.
-            Harper will chase the customer and work the quote. Every submission
-            is tagged as a Blitz referral.
+            Send any Blitz commercial referral to Harper — whether it fits Blitz
+            appetite or not. Harper will chase the customer and work the quote.
+            Every submission is tagged as a Blitz referral.
           </p>
         </div>
       </section>
@@ -128,17 +136,16 @@ export function BlitzReferForm() {
                 Share leads with Harper
               </h2>
               <p className="text-ember-muted text-base leading-relaxed m-0 mb-6 max-w-[44ch]">
-                Enter the customer&apos;s contact info, business address, class
-                type, and annual revenue so Harper can quote faster on the first
-                call.
+                First name, last name, phone, and email are required. Add
+                business details when you have them — everything else is
+                optional.
               </p>
               <ul className="list-none m-0 p-0 grid gap-3">
                 {[
-                  "Use this form for risks outside Blitz appetite",
-                  "Priority classes: tattoo, vape, cannabis, liquor stores",
-                  "Include contact phone + email so intake can reach them",
-                  "Include annual revenue of $50k+ when known",
-                  "Notes are optional — fill required fields first",
+                  "Use this form for any Blitz referral to Harper",
+                  "Works for leads inside or outside Blitz appetite",
+                  "Required: first name, last name, phone, and email",
+                  "Business, class, revenue, and notes are optional",
                 ].map((item) => (
                   <li
                     key={item}
@@ -181,75 +188,88 @@ export function BlitzReferForm() {
 
               <form onSubmit={onSubmit} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Customer contact name" htmlFor="contact-name">
+                  <Field label="First name" htmlFor="first-name">
                     <input
-                      id="contact-name"
-                      name="contactName"
+                      id="first-name"
+                      name="firstName"
                       type="text"
                       required
+                      autoComplete="given-name"
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="Business name" htmlFor="business-name">
+                  <Field label="Last name" htmlFor="last-name">
                     <input
-                      id="business-name"
-                      name="businessName"
+                      id="last-name"
+                      name="lastName"
                       type="text"
                       required
+                      autoComplete="family-name"
                       className="track-finput"
                     />
                   </Field>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Customer phone" htmlFor="phone">
+                  <Field label="Phone" htmlFor="phone">
                     <input
                       id="phone"
                       name="phone"
                       type="tel"
                       required
                       pattern={PHONE_PATTERN}
+                      autoComplete="tel"
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="Customer email" htmlFor="email">
+                  <Field label="Email" htmlFor="email">
                     <input
                       id="email"
                       name="email"
                       type="email"
                       required
+                      autoComplete="email"
                       className="track-finput"
                     />
                   </Field>
                 </div>
 
-                <Field label="Business street address" htmlFor="street">
+                <Field label="Business name (optional)" htmlFor="business-name">
+                  <input
+                    id="business-name"
+                    name="businessName"
+                    type="text"
+                    className="track-finput"
+                  />
+                </Field>
+
+                <Field
+                  label="Business street address (optional)"
+                  htmlFor="street"
+                >
                   <input
                     id="street"
                     name="street"
                     type="text"
-                    required
                     placeholder="Street, suite"
                     className="track-finput"
                   />
                 </Field>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="City" htmlFor="city">
+                  <Field label="City (optional)" htmlFor="city">
                     <input
                       id="city"
                       name="city"
                       type="text"
-                      required
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="State" htmlFor="state">
+                  <Field label="State (optional)" htmlFor="state">
                     <div className="relative">
                       <select
                         id="state"
                         name="state"
-                        required
                         className="track-finput appearance-none pr-8"
                         defaultValue=""
                       >
@@ -264,24 +284,22 @@ export function BlitzReferForm() {
                       </span>
                     </div>
                   </Field>
-                  <Field label="ZIP" htmlFor="zip">
+                  <Field label="ZIP (optional)" htmlFor="zip">
                     <input
                       id="zip"
                       name="zip"
                       type="text"
-                      required
                       pattern="[0-9]{5}(-[0-9]{4})?"
                       className="track-finput"
                     />
                   </Field>
                 </div>
 
-                <Field label="Class / business type" htmlFor="class-code">
+                <Field label="Class / business type (optional)" htmlFor="class-code">
                   <div className="relative">
                     <select
                       id="class-code"
                       name="classCode"
-                      required
                       className="track-finput appearance-none pr-8"
                       value={classCode}
                       onChange={(e) => setClassCode(e.target.value)}
@@ -310,12 +328,11 @@ export function BlitzReferForm() {
                   </Field>
                 ) : null}
 
-                <Field label="Annual revenue" htmlFor="revenue">
+                <Field label="Annual revenue (optional)" htmlFor="revenue">
                   <div className="relative">
                     <select
                       id="revenue"
                       name="revenue"
-                      required
                       className="track-finput appearance-none pr-8"
                       defaultValue=""
                     >

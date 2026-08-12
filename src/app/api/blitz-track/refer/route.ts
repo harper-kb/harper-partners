@@ -32,7 +32,7 @@ function str(value: unknown, max: number) {
 
 /**
  * Authenticated Blitz Track referral submit.
- * All fields optional (Ammar) — soft-validate format only when provided.
+ * Required: first name, last name, phone, email. Soft-validate the rest.
  * Same shared partner_blitz table as public /blitz — never Weblead / inquiry SMS.
  */
 export async function POST(request: Request) {
@@ -55,6 +55,11 @@ export async function POST(request: Request) {
   }
 
   const raw = (body ?? {}) as Record<string, unknown>;
+  const firstName = str(raw.firstName, 60);
+  const lastName = str(raw.lastName, 60);
+  const contactName =
+    str(raw.contactName, 120) ||
+    [firstName, lastName].filter(Boolean).join(" ");
   const classCodeRaw = str(raw.classCode, 40);
   const classCode = classCodeRaw as PartnerClassCode;
   const email = str(raw.email, 200).toLowerCase();
@@ -65,16 +70,20 @@ export async function POST(request: Request) {
     appetiteRaw === "inside" || appetiteRaw === "outside" ? appetiteRaw : ""
   ) as BlitzAppetite | "";
 
-  // Soft validation: only reject bad formats when a value was entered.
-  if (email && !EMAIL_RE.test(email)) {
+  if (!firstName || !lastName) {
     return NextResponse.json(
-      {
-        ok: false,
-        message: "That email doesn’t look valid — fix it or leave it blank.",
-      },
+      { ok: false, message: "First name and last name are required." },
       { status: 400 },
     );
   }
+  if (!str(raw.phone, 40) || !EMAIL_RE.test(email)) {
+    return NextResponse.json(
+      { ok: false, message: "Valid customer phone and email are required." },
+      { status: 400 },
+    );
+  }
+
+  // Soft validation: only reject bad formats when a value was entered.
   if (zip && !ZIP_RE.test(zip)) {
     return NextResponse.json(
       { ok: false, message: "ZIP should be 5 digits (or leave blank)." },
@@ -105,12 +114,18 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+  if (classCodeRaw === "other" && !str(raw.classCodeOther, 120)) {
+    return NextResponse.json(
+      { ok: false, message: "Please describe the class type for Other." },
+      { status: 400 },
+    );
+  }
 
   const payload: PartnerReferralPayload = {
     partnerId: BLITZ_TRACK.id,
     partnerName: BLITZ_TRACK.name,
     partnerShortName: BLITZ_TRACK.shortName,
-    contactName: str(raw.contactName, 120),
+    contactName,
     businessName: str(raw.businessName, 160),
     phone: str(raw.phone, 40),
     email,
@@ -124,31 +139,6 @@ export async function POST(request: Request) {
     notes: str(raw.notes, 2000) || undefined,
     submittedAt: new Date().toISOString(),
   };
-
-  const hasAnyField = Boolean(
-    payload.contactName ||
-      payload.businessName ||
-      payload.phone ||
-      payload.email ||
-      payload.street ||
-      payload.city ||
-      payload.state ||
-      payload.zip ||
-      payload.revenue ||
-      classCodeRaw ||
-      payload.classCodeOther ||
-      payload.notes ||
-      appetite,
-  );
-  if (!hasAnyField) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Add at least one detail about the lead before sending.",
-      },
-      { status: 400 },
-    );
-  }
 
   const origin =
     request.headers.get("origin") || "https://partners.harperinsure.com";

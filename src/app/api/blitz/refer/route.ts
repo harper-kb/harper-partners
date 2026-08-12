@@ -28,6 +28,7 @@ function str(value: unknown, max: number) {
 
 /**
  * Public Blitz referral submit.
+ * Required: first name, last name, phone, email.
  * Writes to partnerships.partner_blitz only — never Weblead / inquiry SMS.
  */
 export async function POST(request: Request) {
@@ -42,56 +43,77 @@ export async function POST(request: Request) {
   }
 
   const raw = (body ?? {}) as Record<string, unknown>;
-  const classCode = str(raw.classCode, 40) as PartnerClassCode;
-  const payload: PartnerReferralPayload = {
-    partnerId: BLITZ_AGENCY.id,
-    partnerName: BLITZ_AGENCY.name,
-    partnerShortName: BLITZ_AGENCY.shortName,
-    contactName: str(raw.contactName, 120),
-    businessName: str(raw.businessName, 160),
-    phone: str(raw.phone, 40),
-    email: str(raw.email, 200).toLowerCase(),
-    street: str(raw.street, 200),
-    city: str(raw.city, 100),
-    state: str(raw.state, 2).toUpperCase(),
-    zip: str(raw.zip, 10),
-    revenue: str(raw.revenue, 40),
-    classCode,
-    classCodeOther: str(raw.classCodeOther, 120) || undefined,
-    notes: str(raw.notes, 2000) || undefined,
-    submittedAt: new Date().toISOString(),
-  };
+  const firstName = str(raw.firstName, 60);
+  const lastName = str(raw.lastName, 60);
+  const contactName =
+    str(raw.contactName, 120) ||
+    [firstName, lastName].filter(Boolean).join(" ");
+  const classCodeRaw = str(raw.classCode, 40);
+  const classCode = classCodeRaw as PartnerClassCode;
+  const email = str(raw.email, 200).toLowerCase();
+  const zip = str(raw.zip, 10);
+  const revenue = str(raw.revenue, 40);
 
-  if (!payload.contactName || !payload.businessName) {
+  if (!firstName || !lastName) {
     return NextResponse.json(
-      { ok: false, message: "Contact name and business name are required." },
+      { ok: false, message: "First name and last name are required." },
       { status: 400 },
     );
   }
-  if (!payload.phone || !EMAIL_RE.test(payload.email)) {
+  if (!str(raw.phone, 40) || !EMAIL_RE.test(email)) {
     return NextResponse.json(
       { ok: false, message: "Valid customer phone and email are required." },
       { status: 400 },
     );
   }
-  if (!payload.street || !payload.city || !payload.state || !ZIP_RE.test(payload.zip)) {
+
+  // Soft validation when optional fields are provided.
+  if (zip && !ZIP_RE.test(zip)) {
     return NextResponse.json(
-      { ok: false, message: "Complete business address, city, state, and ZIP." },
+      { ok: false, message: "ZIP should be 5 digits (or leave blank)." },
       { status: 400 },
     );
   }
-  if (!ALLOWED_CLASSES.has(payload.classCode) || !ALLOWED_REVENUE.has(payload.revenue)) {
+  if (classCodeRaw && !ALLOWED_CLASSES.has(classCodeRaw as PartnerClassCode)) {
     return NextResponse.json(
-      { ok: false, message: "Select class type and annual revenue." },
+      {
+        ok: false,
+        message: "Select a class type from the list, or leave blank.",
+      },
       { status: 400 },
     );
   }
-  if (payload.classCode === "other" && !payload.classCodeOther) {
+  if (revenue && !ALLOWED_REVENUE.has(revenue)) {
+    return NextResponse.json(
+      { ok: false, message: "Select revenue from the list, or leave blank." },
+      { status: 400 },
+    );
+  }
+  if (classCodeRaw === "other" && !str(raw.classCodeOther, 120)) {
     return NextResponse.json(
       { ok: false, message: "Please describe the class type for Other." },
       { status: 400 },
     );
   }
+
+  const payload: PartnerReferralPayload = {
+    partnerId: BLITZ_AGENCY.id,
+    partnerName: BLITZ_AGENCY.name,
+    partnerShortName: BLITZ_AGENCY.shortName,
+    contactName,
+    businessName: str(raw.businessName, 160),
+    phone: str(raw.phone, 40),
+    email,
+    street: str(raw.street, 200),
+    city: str(raw.city, 100),
+    state: str(raw.state, 2).toUpperCase(),
+    zip,
+    revenue,
+    classCode,
+    classCodeOther: str(raw.classCodeOther, 120) || undefined,
+    notes: str(raw.notes, 2000) || undefined,
+    submittedAt: new Date().toISOString(),
+  };
 
   const origin =
     request.headers.get("origin") || "https://partners.harperinsure.com";
@@ -109,8 +131,7 @@ export async function POST(request: Request) {
       ok: true,
       referralId: saved.id,
       ingest: "deferred",
-      message:
-        "Referral received. Harper will chase this lead.",
+      message: "Referral received. Harper will chase this lead.",
       partner: {
         id: BLITZ_AGENCY.id,
         shortName: BLITZ_AGENCY.shortName,

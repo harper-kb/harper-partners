@@ -77,9 +77,13 @@ export function BlitzTrackReferForm() {
     const form = e.currentTarget;
 
     const data = new FormData(form);
+    const firstName = String(data.get("firstName") || "").trim();
+    const lastName = String(data.get("lastName") || "").trim();
     const payload = {
       appetite: String(data.get("appetite") || "").trim(),
-      contactName: String(data.get("contactName") || "").trim(),
+      firstName,
+      lastName,
+      contactName: [firstName, lastName].filter(Boolean).join(" "),
       businessName: String(data.get("businessName") || "").trim(),
       phone: String(data.get("phone") || "").trim(),
       email: String(data.get("email") || "").trim(),
@@ -93,13 +97,11 @@ export function BlitzTrackReferForm() {
       notes: String(data.get("notes") || "").trim() || undefined,
     };
 
-    const hasAny = Object.values(payload).some(
-      (v) => typeof v === "string" && v.length > 0,
-    );
-    if (!hasAny) {
+    if (!firstName || !lastName || !payload.phone || !payload.email) {
       setStatus({
         ok: false,
-        message: "Add at least one detail about the lead before sending.",
+        message:
+          "First name, last name, phone, and email are required.",
       });
       return;
     }
@@ -187,9 +189,10 @@ export function BlitzTrackReferForm() {
             Refer a lead. <em className="accent-serif">We will chase it.</em>
           </h1>
           <p className="text-ember-creme/80 text-[1.05rem] leading-relaxed m-0 max-w-[48ch]">
-            Fill this out when a commercial risk is outside Blitz appetite.
-            Harper intake will call, text, and email until we reach the
-            customer. Every submission shows on the shared Blitz Track board.
+            Send any Blitz commercial referral to Harper — whether it fits Blitz
+            appetite or not. Harper intake will call, text, and email until we
+            reach the customer. Every submission shows on the shared Blitz Track
+            board.
           </p>
         </div>
       </section>
@@ -203,15 +206,16 @@ export function BlitzTrackReferForm() {
                 Share leads with Harper
               </h2>
               <p className="text-ember-muted text-base leading-relaxed m-0 mb-6 max-w-[44ch]">
-                Every field is optional — share whatever you have. More detail
-                helps Harper intake quote faster on the first call.
+                First name, last name, phone, and email are required. Add
+                business details when you have them — everything else is
+                optional.
               </p>
               <ul className="list-none m-0 p-0 grid gap-3">
                 {[
-                  "Mark whether the lead is inside or outside Blitz appetite",
-                  "Outside appetite → Harper places; inside → can go back to Blitz",
-                  "Phone + email help intake reach them — add if you have them",
-                  "Everything else is optional — send whatever you have",
+                  "Use this form for any Blitz referral to Harper",
+                  "Optional: mark inside vs outside appetite for routing",
+                  "Required: first name, last name, phone, and email",
+                  "Business, class, revenue, and notes are optional",
                 ].map((item) => (
                   <li
                     key={item}
@@ -255,7 +259,7 @@ export function BlitzTrackReferForm() {
               <form onSubmit={onSubmit} className="space-y-3" noValidate>
                 <fieldset className="m-0 p-0 border-0">
                   <legend className="block text-ember-blue text-xs font-medium mb-2">
-                    Is this lead inside or outside Blitz appetite?
+                    Inside or outside Blitz appetite? (optional)
                   </legend>
                   <div className="grid gap-2">
                     {BLITZ_APPETITE_OPTIONS.filter((o) => o.value).map((o) => {
@@ -290,50 +294,70 @@ export function BlitzTrackReferForm() {
                     })}
                   </div>
                   <p className="text-[11px] text-ember-muted m-0 mt-2 leading-snug">
-                    Optional — if unsure, leave blank or pick Outside (Harper
-                    places).
+                    Optional routing tag — send the lead either way. Leave blank
+                    if unsure.
                   </p>
                 </fieldset>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Customer contact name" htmlFor="contact-name">
+                  <Field label="First name" htmlFor="first-name">
                     <input
-                      id="contact-name"
-                      name="contactName"
+                      id="first-name"
+                      name="firstName"
                       type="text"
+                      required
+                      autoComplete="given-name"
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="Business name" htmlFor="business-name">
+                  <Field label="Last name" htmlFor="last-name">
                     <input
-                      id="business-name"
-                      name="businessName"
+                      id="last-name"
+                      name="lastName"
                       type="text"
+                      required
+                      autoComplete="family-name"
                       className="track-finput"
                     />
                   </Field>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Customer phone" htmlFor="phone">
+                  <Field label="Phone" htmlFor="phone">
                     <input
                       id="phone"
                       name="phone"
                       type="tel"
+                      required
+                      autoComplete="tel"
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="Customer email" htmlFor="email">
+                  <Field label="Email" htmlFor="email">
                     <input
                       id="email"
                       name="email"
                       type="email"
+                      required
+                      autoComplete="email"
                       className="track-finput"
                     />
                   </Field>
                 </div>
 
-                <Field label="Business street address" htmlFor="street">
+                <Field label="Business name (optional)" htmlFor="business-name">
+                  <input
+                    id="business-name"
+                    name="businessName"
+                    type="text"
+                    className="track-finput"
+                  />
+                </Field>
+
+                <Field
+                  label="Business street address (optional)"
+                  htmlFor="street"
+                >
                   <input
                     id="street"
                     name="street"
@@ -344,7 +368,7 @@ export function BlitzTrackReferForm() {
                 </Field>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="City" htmlFor="city">
+                  <Field label="City (optional)" htmlFor="city">
                     <input
                       id="city"
                       name="city"
@@ -352,7 +376,7 @@ export function BlitzTrackReferForm() {
                       className="track-finput"
                     />
                   </Field>
-                  <Field label="State" htmlFor="state">
+                  <Field label="State (optional)" htmlFor="state">
                     <div className="relative">
                       <select
                         id="state"
@@ -371,7 +395,7 @@ export function BlitzTrackReferForm() {
                       </span>
                     </div>
                   </Field>
-                  <Field label="ZIP" htmlFor="zip">
+                  <Field label="ZIP (optional)" htmlFor="zip">
                     <input
                       id="zip"
                       name="zip"
@@ -381,7 +405,7 @@ export function BlitzTrackReferForm() {
                   </Field>
                 </div>
 
-                <Field label="Class / business type" htmlFor="class-code">
+                <Field label="Class / business type (optional)" htmlFor="class-code">
                   <div className="relative">
                     <select
                       id="class-code"
@@ -413,7 +437,7 @@ export function BlitzTrackReferForm() {
                   </Field>
                 ) : null}
 
-                <Field label="Annual revenue" htmlFor="revenue">
+                <Field label="Annual revenue (optional)" htmlFor="revenue">
                   <div className="relative">
                     <select
                       id="revenue"
@@ -433,7 +457,7 @@ export function BlitzTrackReferForm() {
                   </div>
                 </Field>
 
-                <Field label="Notes for Harper" htmlFor="notes">
+                <Field label="Notes for Harper (optional)" htmlFor="notes">
                   <textarea
                     id="notes"
                     name="notes"
@@ -456,8 +480,8 @@ export function BlitzTrackReferForm() {
                   ) : null}
                 </button>
                 <p className="text-[0.7rem] text-ember-muted m-0 pt-1 leading-tight">
-                  All fields optional. Submissions appear on the shared Blitz
-                  Track dashboard for the whole team.
+                  First name, last name, phone, and email required. Submissions
+                  appear on the shared Blitz Track dashboard.
                 </p>
               </form>
             </div>
