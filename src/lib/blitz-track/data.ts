@@ -169,6 +169,13 @@ function businessFromOrg(org: string) {
   return org.split(/\s·\svia\s/i)[0]?.trim() || org;
 }
 
+/** Dedupe key — blank business names must not collapse unrelated form rows. */
+function leadDedupeKey(business: string, uniqueId: string) {
+  const normalized = business.trim().toLowerCase();
+  if (normalized) return normalized;
+  return `row:${uniqueId}`;
+}
+
 function isBlitzPartner(partner: string | null | undefined, org: string) {
   const blob = `${partner || ""} ${org}`.toLowerCase();
   return /\bblitz\b/.test(blob);
@@ -253,7 +260,7 @@ export async function getBlitzTrackLeads(): Promise<{
         ? mapBbStage(bb)
         : mapRegistryStage(meta.rstage, deal.stage);
       const business = bb?.company_name || businessFromOrg(deal.org);
-      const key = business.toLowerCase();
+      const key = leadDedupeKey(business, deal.id);
       if (seenBusiness.has(key)) continue;
       seenBusiness.add(key);
 
@@ -283,7 +290,8 @@ export async function getBlitzTrackLeads(): Promise<{
     }
 
     for (const row of formRows) {
-      const key = row.business_name.toLowerCase();
+      const displayBusiness = row.business_name.trim() || row.contact_name.trim() || "Unnamed business";
+      const key = leadDedupeKey(row.business_name, row.id);
       if (seenBusiness.has(key)) continue;
       seenBusiness.add(key);
       const stage = mapFormStatus(row.status, row.ingest_status);
@@ -296,7 +304,7 @@ export async function getBlitzTrackLeads(): Promise<{
       const noteBody = stripAppetiteTag(row.notes);
       leads.push({
         id: `BZ-${row.id.slice(0, 8)}`,
-        business: row.business_name || "Unnamed business",
+        business: displayBusiness,
         classLabel: row.class_label || "Commercial",
         state: row.state || "—",
         revenue: formatRevenueCode(row.revenue),
