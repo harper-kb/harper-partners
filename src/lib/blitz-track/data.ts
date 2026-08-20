@@ -35,6 +35,7 @@ type BlitzFormRow = {
   ingest_status: string;
   notes: string | null;
   appetite: string | null;
+  bb_company_id: number | null;
   created_at: string;
 };
 
@@ -112,12 +113,16 @@ function mapBbStage(row: BbCompanyRow): LeadStage {
   const g = (row.general_stage || "").toLowerCase();
   const s = (row.stage || "").toLowerCase();
   const blob = `${g} ${s}`;
-  if (g === "dead" || /\blost\b/.test(blob)) return "lost";
+  if (g === "dead" || /\blost\b/.test(blob) || /\bcancel/.test(blob)) {
+    return "lost";
+  }
   if (
     g === "payment requested" ||
     g === "payment received" ||
     g === "servicing" ||
-    /\bbound\b/.test(blob)
+    /\bbound\b/.test(blob) ||
+    /\bbinder\b/.test(blob) ||
+    /\bbinding\b/.test(blob)
   ) {
     return "bound";
   }
@@ -125,7 +130,11 @@ function mapBbStage(row: BbCompanyRow): LeadStage {
     g === "quote pitched" ||
     g === "quote received" ||
     g === "quote conveyed" ||
-    /\bquote\b/.test(blob)
+    /\bquote\b/.test(blob) ||
+    // Past intake chase — markets / UW working the file
+    g === "submitted to underwriter" ||
+    /\bunderwrit/.test(blob) ||
+    /\bapplication\b/.test(blob)
   ) {
     return "quoted";
   }
@@ -207,6 +216,7 @@ export async function getBlitzTrackLeads(): Promise<{
           ingest_status,
           notes,
           appetite,
+          bb_company_id,
           created_at::text as created_at
         from partnerships.partner_blitz
         order by created_at desc
@@ -232,9 +242,17 @@ export async function getBlitzTrackLeads(): Promise<{
       `.catch(() => [] as DealRow[]),
     ]);
 
-    const bbIds = deals
+    const dealBbIds = deals
       .map((d) => parseMeta(d.summary)?.bb)
       .filter((n): n is number => typeof n === "number" && n > 0);
+    const formBbIds = formRows
+      .map((r) =>
+        typeof r.bb_company_id === "number" && r.bb_company_id > 0
+          ? r.bb_company_id
+          : null,
+      )
+      .filter((n): n is number => n != null);
+    const bbIds = [...new Set([...dealBbIds, ...formBbIds])];
 
     let byBb = new Map<number, BbCompanyRow>();
     if (hasBbAccess() && bbIds.length) {
@@ -290,11 +308,22 @@ export async function getBlitzTrackLeads(): Promise<{
     }
 
     for (const row of formRows) {
-      const displayBusiness = row.business_name.trim() || row.contact_name.trim() || "Unnamed business";
+      const displayBusiness =
+        row.business_name.trim() ||
+        row.contact_name.trim() ||
+        "Unnamed business";
       const key = leadDedupeKey(row.business_name, row.id);
       if (seenBusiness.has(key)) continue;
       seenBusiness.add(key);
-      const stage = mapFormStatus(row.status, row.ingest_status);
+
+      const bbId =
+        typeof row.bb_company_id === "number" && row.bb_company_id > 0
+          ? row.bb_company_id
+          : null;
+      const bb = bbId ? byBb.get(bbId) : undefined;
+      const stage = bb
+        ? mapBbStage(bb)
+        : mapFormStatus(row.status, row.ingest_status);
       const appetiteCol =
         row.appetite === "inside" || row.appetite === "outside"
           ? row.appetite
@@ -302,19 +331,29 @@ export async function getBlitzTrackLeads(): Promise<{
       const appetite = appetiteCol || parseAppetiteFromNotes(row.notes);
       const appetiteBit = appetiteLabel(appetite);
       const noteBody = stripAppetiteTag(row.notes);
+      const producer = formatProducer(bb?.producer_assigned || null);
+      const bbStatus =
+        bb?.general_stage || bb?.stage
+          ? [bb.general_stage, bb.stage].filter(Boolean).join(" · ")
+          : null;
       leads.push({
-        id: `BZ-${row.id.slice(0, 8)}`,
-        business: displayBusiness,
+        id: bbId ? `BB-${bbId}` : `BZ-${row.id.slice(0, 8)}`,
+        business: bb?.company_name || displayBusiness,
         classLabel: row.class_label || "Commercial",
-        state: row.state || "—",
+        state: bb?.company_state
+          ? bb.company_state.length === 2
+            ? bb.company_state.toUpperCase()
+            : bb.company_state.slice(0, 12)
+          : row.state || "—",
         revenue: formatRevenueCode(row.revenue),
         received: formatReceived(row.created_at),
-        owner: `${stageOwner(stage)} · Harper intake`,
+        owner: `${stageOwner(stage)} · ${producer}`,
         statusDetail: (
           [
+            bbStatus,
             appetiteBit,
             noteBody,
-            !appetiteBit && !noteBody
+            !bbStatus && !appetiteBit && !noteBody
               ? row.ingest_status === "deferred"
                 ? "Saved from Blitz form — Harper will chase"
                 : `Status: ${row.status}`
